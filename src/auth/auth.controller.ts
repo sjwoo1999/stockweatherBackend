@@ -1,45 +1,39 @@
 // src/auth/auth.controller.ts
 import { Controller, Get, UseGuards, Req, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Response } from 'express'; // Res 데코레이터를 위해 필요 (npm i @types/express)
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config'; // ConfigService가 필요할 수 있습니다.
 
-@Controller('auth')
+@Controller('auth') // 이 컨트롤러의 기본 경로는 '/auth'
 export class AuthController {
-  // 1. 카카오 로그인 시작 엔드포인트
-  // 이 엔드포인트로 접근하면 카카오 인증 페이지로 리다이렉트됩니다.
+  constructor(private configService: ConfigService) {} // ConfigService 주입 (필요하다면)
+
   @Get('kakao')
-  @UseGuards(AuthGuard('kakao')) // 'kakao' 전략 사용
+  @UseGuards(AuthGuard('kakao'))
   async kakaoAuth(@Req() req) {
-    // 실제 이 함수는 카카오 인증 페이지로 리다이렉트하기 때문에 실행되지 않습니다.
-    // Passport가 인증 흐름을 제어합니다.
+    // 이 부분은 카카오 로그인 페이지로 리다이렉트되므로 실제로 실행되지 않습니다.
   }
 
-  // 2. 카카오 로그인 콜백 엔드포인트
-  // 카카오 인증 성공 후 인가 코드를 받아 처리합니다.
-  @Get('kakao/callback')
-  @UseGuards(AuthGuard('kakao')) // 'kakao' 전략 사용
+  // ⭐ 이 부분을 수정합니다: 'kakao/callback' 대신 'callback'으로 변경 ⭐
+  // 이렇게 하면 최종 URL이 http://localhost:3000/auth/callback 이 됩니다.
+  @Get('callback') // 경로를 'callback'으로 변경
+  @UseGuards(AuthGuard('kakao')) // 이 시점에서는 이미 인증되어 req.user에 사용자 정보가 있음
   async kakaoAuthCallback(@Req() req, @Res() res: Response) {
-    // `AuthGuard('kakao')`가 성공적으로 실행되면, `req.user`에 KakaoStrategy에서 반환한
-    // 사용자 정보(예: { kakaoId, email, nickname, ... })가 담겨 있습니다.
     const user = req.user;
+    console.log('로그인 성공. 사용자 정보:', user);
 
-    // --- TODO: 실제 로그인/회원가입 로직 구현 ---
-    // 1. DB에서 사용자 정보를 조회하거나 새로 생성합니다.
-    //    (예: const serviceUser = await this.authService.findOrCreateUser(user);)
-    // 2. 서비스 내부에서 사용할 JWT 토큰을 발급합니다.
-    //    (예: const jwtToken = this.authService.generateJwtToken(serviceUser);)
-    // ------------------------------------------
+    // JWT 토큰이 이미 req.query.token으로 넘어오고 있으므로
+    // 프론트엔드로 리다이렉트 시킬 URL을 구성합니다.
+    const jwtToken = req.query.token; // 쿼리 파라미터에서 토큰을 가져옵니다.
 
-    // 예시: 개발 환경에서 사용자 정보를 JSON으로 반환
-    // 실제 서비스에서는 프론트엔드로 JWT 토큰을 포함하여 리다이렉트하는 것이 일반적입니다.
-    res.status(200).json({
-      message: '카카오 로그인 성공 및 사용자 정보 수신',
-      userData: user,
-      // token: jwtToken // 실제 발급된 JWT 토큰
-    });
+    // 프론트엔드 URL을 환경 변수에서 가져오거나 직접 지정합니다.
+    const frontendBaseUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'; // 예: http://localhost:3000 (프론트엔드 포트)
 
-    // 예시: 로그인 성공 후 프론트엔드로 리다이렉트 (JWT 토큰 전달)
-    // const jwtToken = 'your_generated_jwt_token'; // 실제 JWT 토큰으로 대체
-    // res.redirect(`http://localhost:3001/auth/success?token=${jwtToken}`);
+    // 프론트엔드의 특정 경로로 토큰과 함께 리다이렉트
+    // 예: http://localhost:3000/main?token=YOUR_JWT_TOKEN
+    res.redirect(`${frontendBaseUrl}/login-success?token=${jwtToken}`); // ⭐ 이 경로도 적절히 수정 필요 ⭐
+
+    // 만약 프론트엔드가 루트 경로에서 토큰을 받으려면
+    // res.redirect(`${frontendBaseUrl}?token=${jwtToken}`);
   }
 }

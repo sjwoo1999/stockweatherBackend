@@ -12,6 +12,11 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     super({
       clientID: configService.get<string>('KAKAO_CLIENT_ID'), // .env에서 KAKAO_CLIENT_ID 가져오기
       callbackURL: configService.get<string>('KAKAO_CALLBACK_URL'), // .env에서 KAKAO_CALLBACK_URL 가져오기
+      // ⭐ 추가: 프로필 정보(닉네임, 프로필 사진) 및 이메일을 가져오기 위한 scope 설정 ⭐
+      // 'profile_nickname'과 'profile_image'는 '프로필 정보(닉네임, 프로필 사진)' 동의 항목에 포함됩니다.
+      // 'account_email'은 '카카오계정(이메일)' 동의 항목에 포함됩니다.
+      // 카카오 개발자 콘솔의 '동의항목' 설정과 일치해야 합니다.
+      scope: ['profile_nickname', 'profile_image', 'account_email'], //
     });
   }
 
@@ -22,14 +27,29 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     profile: any,
     done: Function,
   ): Promise<any> {
-    // profile 객체에 카카오로부터 받은 사용자 정보가 들어있습니다.
-    // console.log('Kakao Profile:', profile); // 개발 시 확인용
+    // ⭐ 중요: 개발 시 profile 객체의 실제 구조를 정확히 확인해야 합니다.
+    // console.log('Kakao Profile (Raw Data):', JSON.stringify(profile, null, 2));
+
+    // 카카오 API 응답 구조에 따라 profile 객체에서 정보 추출 (더 견고하게 변경)
+    const kakaoAccount = profile._json?.kakao_account;
+    const userProfile = kakaoAccount?.profile; // 닉네임, 프로필 사진이 포함될 수 있는 객체
 
     const user = {
       kakaoId: profile.id, // 카카오 고유 ID
-      email: profile._json?.kakao_account?.email, // 이메일 (동의한 경우)
-      nickname: profile.displayName, // 닉네임
-      profileImage: profile._json?.properties?.profile_image, // 프로필 이미지 URL
+      // 이메일: kakao_account 객체 아래에 직접 email 속성으로 제공됩니다.
+      email: kakaoAccount?.email, //
+      
+      // 닉네임: profile.displayName 또는 kakao_account.profile.nickname을 사용할 수 있습니다.
+      // displayName은 passport-kakao가 제공하는 추상화된 값이며,
+      // _json.kakao_account.profile.nickname은 카카오 API의 원본 응답입니다.
+      nickname: userProfile?.nickname || profile.displayName, //
+      
+      // 프로필 이미지 URL: kakao_account.profile 아래에 thumbnail_image_url 또는 profile_image_url로 제공됩니다.
+      // thumbnail_image_url은 작은 이미지, profile_image_url은 큰 이미지입니다.
+      profileImage: userProfile?.thumbnail_image_url || userProfile?.profile_image_url, //
+      
+      accessToken,
+      refreshToken,
       // 필요한 다른 정보 추가 (카카오 개발자 콘솔의 동의 항목 설정에 따라 달라짐)
     };
 

@@ -1,16 +1,29 @@
 // src/auth/auth.module.ts
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport'; // PassportModule 임포트
-import { KakaoStrategy } from './kakao.strategy'; // KakaoStrategy 임포트
-import { AuthController } from './auth.controller'; // (다음 단계에서 생성)
-// import { AuthService } from './auth.service'; // (JWT 발급 등 로그인 로직 처리 시 필요)
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { KakaoStrategy } from './kakao.strategy';
+import { JwtStrategy } from './jwt.strategy'; // <-- 추가
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    PassportModule.register({ session: false }), // JWT 기반 인증 시 session: false
-    // PassportModule.register({ defaultStrategy: 'jwt' }), // JWT 사용 시 기본 전략 설정
+    PassportModule.register({ session: false }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
+      inject: [ConfigService],
+    }),
+    UsersModule,
   ],
-  providers: [KakaoStrategy, /* AuthService */], // KakaoStrategy를 프로바이더에 추가
-  controllers: [AuthController], // (다음 단계에서 추가)
+  providers: [KakaoStrategy, JwtStrategy, AuthService], // <-- JwtStrategy 추가
+  controllers: [AuthController],
+  exports: [AuthService],
 })
 export class AuthModule {}
