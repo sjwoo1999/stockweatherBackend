@@ -1,15 +1,16 @@
 // src/users/users.module.ts
-import { Module, forwardRef } from '@nestjs/common'; // ⭐ forwardRef 임포트 확인 ⭐
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
+import { User } from './user.entity'; // ✨ User 엔티티 임포트
 import { UsersController } from './users.controller';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    forwardRef(() => AuthModule), // ⭐ AuthModule에 forwardRef 적용되었는지 확인 ⭐
+    TypeOrmModule.forFeature([User]), // ✨ User 엔티티 등록
   ],
-  controllers: [UsersController],
   providers: [UsersService],
-  exports: [UsersService], // ⭐ UsersService가 export 되었는지 다시 확인 ⭐
+  controllers: [UsersController],
+  exports: [UsersService],
 })
 export class UsersModule {}
