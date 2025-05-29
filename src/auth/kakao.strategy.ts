@@ -1,22 +1,22 @@
 // src/auth/kakao.strategy.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common'; // UnauthorizedException 추가
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-kakao';
-import { ConfigService } from '@nestjs/config'; // 환경 변수 사용을 위해 추가
+import { ConfigService } from '@nestjs/config';
+import { AuthService } from './auth.service'; // ⭐ AuthService 임포트 ⭐
+import { User } from '../users/user.interface'; // ⭐ User 인터페이스 임포트 ⭐
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
   constructor(
-    private configService: ConfigService // ConfigService 주입
+    private configService: ConfigService,
+    private authService: AuthService, // ⭐ AuthService 주입 ⭐
   ) {
     super({
-      clientID: configService.get<string>('KAKAO_CLIENT_ID'), // .env에서 KAKAO_CLIENT_ID 가져오기
-      callbackURL: configService.get<string>('KAKAO_CALLBACK_URL'), // .env에서 KAKAO_CALLBACK_URL 가져오기
-      // ⭐ 추가: 프로필 정보(닉네임, 프로필 사진) 및 이메일을 가져오기 위한 scope 설정 ⭐
-      // 'profile_nickname'과 'profile_image'는 '프로필 정보(닉네임, 프로필 사진)' 동의 항목에 포함됩니다.
-      // 'account_email'은 '카카오계정(이메일)' 동의 항목에 포함됩니다.
-      // 카카오 개발자 콘솔의 '동의항목' 설정과 일치해야 합니다.
-      scope: ['profile_nickname', 'profile_image', 'account_email'], //
+      clientID: configService.get<string>('KAKAO_CLIENT_ID'),
+      // clientSecret: configService.get<string>('KAKAO_CLIENT_SECRET'), // 필요하다면 추가
+      callbackURL: configService.get<string>('KAKAO_CALLBACK_URL'),
+      scope: ['profile_nickname', 'profile_image', 'account_email'],
     });
   }
 
@@ -24,41 +24,49 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
   async validate(
     accessToken: string,
     refreshToken: string,
-    profile: any,
+    profile: any, // 카카오로부터 받은 원본 프로필 객체
     done: Function,
   ): Promise<any> {
     // ⭐ 중요: 개발 시 profile 객체의 실제 구조를 정확히 확인해야 합니다.
     // console.log('Kakao Profile (Raw Data):', JSON.stringify(profile, null, 2));
 
-    // 카카오 API 응답 구조에 따라 profile 객체에서 정보 추출 (더 견고하게 변경)
-    const kakaoAccount = profile._json?.kakao_account;
-    const userProfile = kakaoAccount?.profile; // 닉네임, 프로필 사진이 포함될 수 있는 객체
+    try {
+      // 카카오 API 응답 구조에 따라 profile 객체에서 필요한 정보 추출
+      // 이 정보는 AuthService의 validateUserFromKakao로 전달됩니다.
+      const kakaoAccount = profile._json?.kakao_account;
+      const userProfile = kakaoAccount?.profile;
 
-    const user = {
-      kakaoId: profile.id, // 카카오 고유 ID
-      // 이메일: kakao_account 객체 아래에 직접 email 속성으로 제공됩니다.
-      email: kakaoAccount?.email, //
-      
-      // 닉네임: profile.displayName 또는 kakao_account.profile.nickname을 사용할 수 있습니다.
-      // displayName은 passport-kakao가 제공하는 추상화된 값이며,
-      // _json.kakao_account.profile.nickname은 카카오 API의 원본 응답입니다.
-      nickname: userProfile?.nickname || profile.displayName, //
-      
-      // 프로필 이미지 URL: kakao_account.profile 아래에 thumbnail_image_url 또는 profile_image_url로 제공됩니다.
-      // thumbnail_image_url은 작은 이미지, profile_image_url은 큰 이미지입니다.
-      profileImage: userProfile?.thumbnail_image_url || userProfile?.profile_image_url, //
-      
-      accessToken,
-      refreshToken,
-      // 필요한 다른 정보 추가 (카카오 개발자 콘솔의 동의 항목 설정에 따라 달라짐)
-    };
+      const kakaoUserInfoForService = {
+        id: profile.id, // 카카오 고유 ID (number)
+        email: kakaoAccount?.email, // 이메일 (string | undefined)
+        nickname: userProfile?.nickname || profile.displayName, // 닉네임 (string)
+        profileImage: userProfile?.thumbnail_image_url || userProfile?.profile_image_url, // 프로필 이미지 URL (string | undefined)
+        // 여기에 필요한 카카오 원본 데이터의 다른 필드도 추가할 수 있습니다.
+        // 예: gender: kakaoAccount?.gender, age_range: kakaoAccount?.age_range
+      };
 
-    // TODO:
-    // 1. user 정보를 데이터베이스에 저장하거나 업데이트하는 로직 구현
-    //    (예: this.usersService.findOrCreate(user))
-    // 2. 서비스 내부에서 사용할 user 객체 반환
-    //    done(null, user); 는 NestJS Passport가 req.user에 이 user 객체를 할당하도록 합니다.
+      console.log('KakaoStrategy: Extracted user info for AuthService:', kakaoUserInfoForService);
 
-    done(null, user);
+      // ⭐⭐⭐ 핵심 로직: AuthService를 통해 사용자 정보 DB 처리 및 우리 시스템의 User 객체 반환 ⭐⭐⭐
+      // AuthService의 validateUserFromKakao 메서드가 Kakao 정보로 DB 작업을 수행하고,
+      // 최종적으로 우리 시스템의 User 객체 (password 필드 없는)를 반환합니다.
+      const user: User = await this.authService.validateUserFromKakao(kakaoUserInfoForService);
+
+      if (!user) {
+        // user가 null로 반환될 경우 (예: validateUserFromKakao 내부에서 실패 처리)
+        console.error('KakaoStrategy: AuthService failed to validate/create user.');
+        return done(new UnauthorizedException('Kakao authentication failed: User processing issue.'), false);
+      }
+
+      // `done(null, user)`는 NestJS Passport가 `req.user`에 이 `user` 객체(`User` 타입)를 할당하도록 합니다.
+      // 이 `user` 객체는 `JwtStrategy`와 다른 컨트롤러/서비스에서 사용될 것입니다.
+      console.log('KakaoStrategy: Successfully validated user, passing to NestJS:', user);
+      done(null, user);
+
+    } catch (error) {
+      console.error('KakaoStrategy: Error during Kakao validation process:', error.message, error.stack);
+      // 에러 발생 시 인증 실패 처리
+      done(new UnauthorizedException('Kakao authentication failed due to an internal error.'), false);
+    }
   }
 }

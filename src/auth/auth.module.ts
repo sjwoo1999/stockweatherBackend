@@ -1,29 +1,30 @@
-// src/auth/auth.module.ts (수정 없음, 확인만)
-import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
+// src/auth/auth.module.ts
+import { Module, forwardRef } from '@nestjs/common'; // ⭐ forwardRef 임포트 확인 ⭐
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KakaoStrategy } from './kakao.strategy';
-import { JwtStrategy } from './jwt.strategy';
-import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtStrategy } from './jwt.strategy';
+import { KakaoStrategy } from './kakao.strategy'; // ⭐ KakaoStrategy 임포트 확인 ⭐
 import { UsersModule } from '../users/users.module';
+import { AuthController } from './auth.controller'; // ⭐ AuthController 임포트 확인 ⭐
 
 @Module({
   imports: [
-    PassportModule.register({ session: false }),
+    forwardRef(() => UsersModule), // ⭐ UsersModule에 forwardRef 적용되었는지 확인 ⭐
+    PassportModule,
+    ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'), // ⭐ 이 값이 .env에 제대로 설정되어 있는지 확인 ⭐
-        signOptions: { expiresIn: '1h' }, // ⭐ 토큰 만료 시간 설정 확인 ⭐
-      }),
       inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
     }),
-    UsersModule,
   ],
-  providers: [KakaoStrategy, JwtStrategy, AuthService],
-  controllers: [AuthController],
-  exports: [AuthService],
+  controllers: [AuthController], // ⭐ AuthController가 여기에 등록되었는지 확인 ⭐
+  providers: [AuthService, JwtStrategy, KakaoStrategy], // ⭐ KakaoStrategy가 여기에 등록되었는지 확인 ⭐
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
