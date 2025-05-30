@@ -1,9 +1,10 @@
-// src/users/users.controller.ts (수정 제안)
-import { Controller, Get, Req, UseGuards, NotFoundException } from '@nestjs/common'; // NotFoundException 추가
+// src/users/users.controller.ts
+import { Controller, Get, Req, UseGuards, NotFoundException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
+import { StockSummary, StockDetail } from '../types/stock'; // 프론트엔드와 공유하는 타입 (새로 정의)
 
-@Controller('users')
+@Controller('users') // 기본 경로를 'users'로 설정
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -11,26 +12,17 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   async getMe(@Req() req) {
     // ⭐ 중요: JwtStrategy에서 req.user에 직접 주입한 ID를 사용해야 합니다.
-    // 당신의 로그에서 req.user는 { id: 2, kakaoId: '1', ... } 형태였습니다.
-    // 그러므로 req.user.sub가 아닌 req.user.id를 사용해야 합니다.
     const userId = req.user.id; // ✅ 이 부분을 req.user.id로 변경합니다!
 
     console.log('GET /users/me 호출됨. req.user:', req.user);
-    console.log(`UsersController: 추출된 userId: ${userId}, 타입: ${typeof userId}`); // 디버깅용 로그 추가
+    console.log(`UsersController: 추출된 userId: ${userId}, 타입: ${typeof userId}`);
 
-    // req.user.sub가 undefined였다는 로그는 이 라인에서 console.log를 찍으면서
-    // 잘못된 필드를 사용하려 했기 때문입니다. 이제 req.user.id를 사용합니다.
-    // console.log(`UsersController: Invalid userId type in req.user.sub: ${req.user.sub}`); // 이 로그는 이제 필요 없습니다.
-
-    // 실제 사용자 정보를 DB에서 다시 조회합니다.
     const user = await this.usersService.findById(userId);
 
     if (!user) {
-      // 사용자를 찾지 못하면 404 Not Found 응답을 보냅니다.
       throw new NotFoundException('로그인된 사용자 정보를 찾을 수 없습니다.');
     }
 
-    // 보안상 민감한 정보는 제외하고 필요한 정보만 클라이언트에 반환합니다.
     return {
       id: user.id,
       kakaoId: user.kakaoId,
@@ -39,7 +31,28 @@ export class UsersController {
       profileImage: user.profileImage,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      // ... 기타 필요한 정보
     };
+  }
+
+  // ⭐ 사용자 관심 종목 요약 API 추가 ⭐
+  @Get('summary') // /users/summary
+  @UseGuards(AuthGuard('jwt'))
+  async getUserSummary(@Req() req): Promise<StockSummary[]> {
+    const userId = req.user.id; // 인증된 사용자 ID
+    console.log(`GET /users/summary 호출됨. 사용자 ID: ${userId}`);
+    // 실제 DB에서 userId에 해당하는 관심 종목 요약 정보를 가져오는 로직 구현
+    // 현재는 목업 데이터를 반환하는 service 함수 호출
+    return this.usersService.getMockUserSummary(userId); // UserService에 추가할 메서드
+  }
+
+  // ⭐ 사용자 관심 종목 상세 API 추가 ⭐
+  @Get('detail') // /users/detail
+  @UseGuards(AuthGuard('jwt'))
+  async getUserDetail(@Req() req): Promise<StockDetail[]> {
+    const userId = req.user.id; // 인증된 사용자 ID
+    console.log(`GET /users/detail 호출됨. 사용자 ID: ${userId}`);
+    // 실제 DB에서 userId에 해당하는 관심 종목 상세 정보를 가져오는 로직 구현
+    // 현재는 목업 데이터를 반환하는 service 함수 호출
+    return this.usersService.getMockUserDetail(userId); // UserService에 추가할 메서드
   }
 }

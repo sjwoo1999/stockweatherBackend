@@ -17,5 +17,13 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  // ⭐⭐⭐ 이 부분을 추가하거나 수정해야 합니다! ⭐⭐⭐
+  "include": [
+    "src/**/*.ts" // src 폴더와 모든 하위 폴더의 .ts 파일 포함
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
