@@ -19,21 +19,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Google Cloud SDK and authenticate Docker
+      # ⭐⭐ 1. Google Cloud 인증을 전용 액션으로 처리합니다. ⭐⭐
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2 # auth 액션 사용
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }} # credentials_json으로 변경
+
+      # ⭐⭐ 2. gcloud SDK를 설치합니다. ⭐⭐
+      - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          service_account: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.GCP_PROJECT_ID }}
+          # docker_credentials는 auth 액션에서 처리되므로 여기서는 필요 없습니다.
+          # install_components: 'cloud run' 같은 특정 컴포넌트만 설치할 수도 있습니다.
+
+      - name: Configure Docker to use gcloud auth
+        run: gcloud auth configure-docker # Docker를 gcloud 인증과 연동합니다.
 
       - name: Debug GCloud Authentication Status
-        run: gcloud auth list
+        run: gcloud auth list # ⭐ 다시 한번 인증 상태를 확인합니다. ⭐
 
       - name: Build and Deploy to Cloud Run
         run: |
           docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
           docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
 
-          gcloud run deploy ${{ env.SERVICE_NAME }} \ # ⭐ 이 줄을 수정합니다. SERVICE_NAME -> env.SERVICE_NAME ⭐
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
