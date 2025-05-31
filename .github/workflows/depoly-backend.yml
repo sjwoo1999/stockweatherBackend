@@ -1,0 +1,55 @@
+# .github/workflows/deploy-backend.yml
+name: Deploy StockWeather Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # main 브랜치에 푸시될 때마다 이 워크플로우 실행
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Authenticate Docker to Google Container Registry
+        run: gcloud auth configure-docker
+
+      - name: Build and Deploy to Cloud Run
+        run: |
+          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --set-env-vars \
+              DB_HOST=${{ secrets.DB_HOST }}, \
+              DB_PORT=${{ secrets.DB_PORT }}, \
+              DB_USERNAME=${{ secrets.DB_USERNAME }}, \
+              DB_DATABASE=${{ secrets.DB_DATABASE }}, \
+              DB_PASSWORD=${{ secrets.DB_PASSWORD }}, \
+              DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }}, \
+              NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}, \
+              NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}, \
+              # 추가 API 키가 있다면 여기에 더하세요:
+              # GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}, \
+              # GOOGLE_CSE_ID=${{ secrets.GOOGLE_CSE_ID }}, \
+              KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }}, \
+              KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}
+        working-directory: . # NestJS 프로젝트 루트 디렉토리에서 실행
