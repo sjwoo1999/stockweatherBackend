@@ -22,22 +22,27 @@ jobs:
       - name: Set up Google Cloud SDK and authenticate Docker
         uses: google-github-actions/setup-gcloud@v2
         with:
+          # service_account_key는 Base64로 인코딩된 값을 secrets.GCP_SA_KEY에서 가져옵니다.
+          # base64_encoded_keys: true 옵션을 통해 액션이 이를 디코딩하도록 지시합니다.
           service_account_key: ${{ secrets.GCP_SA_KEY }}
+          base64_encoded_keys: true # ⭐ 이 줄이 핵심입니다. ⭐
+
           project_id: ${{ env.GCP_PROJECT_ID }}
-          docker_credentials: true # Docker 인증을 setup-gcloud 액션에서 직접 처리
+          # Docker 인증도 setup-gcloud 액션에서 직접 처리하도록 합니다.
+          docker_credentials: true
 
-      # gcloud auth configure-docker 스텝은 이제 필요 없으므로 삭제합니다.
-      # - name: Authenticate Docker to Google Container Registry
-      #   run: gcloud auth configure-docker
+      # 이전 gcloud auth configure-docker 스텝은 삭제되었습니다.
 
-      - name: Debug GCloud Authentication Status # ⭐ 디버깅을 위한 스텝 추가 ⭐
-        run: gcloud auth list
+      - name: Debug GCloud Authentication Status
+        run: gcloud auth list # ⭐ 이 스텝으로 인증 성공 여부를 확인합니다. ⭐
 
       - name: Build and Deploy to Cloud Run
         run: |
+          # Docker 이미지를 빌드하고 Artifact Registry(gcr.io)에 푸시합니다.
           docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
           docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
 
+          # Cloud Run 서비스에 배포합니다.
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
             --platform managed \
@@ -52,9 +57,6 @@ jobs:
               DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }}, \
               NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}, \
               NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}, \
-              # 추가 API 키가 있다면 여기에 더하세요:
-              # GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}, \
-              # GOOGLE_CSE_ID=${{ secrets.GOOGLE_CSE_ID }}, \
               KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }}, \
               KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}
-        working-directory: . # NestJS 프로젝트 루트 디렉토리에서 실행
+        working-directory: . # NestJS 프로젝트 루트 디렉토리에서 명령어 실행
