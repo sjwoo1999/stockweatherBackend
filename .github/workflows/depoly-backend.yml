@@ -22,19 +22,13 @@ jobs:
       - name: Set up Google Cloud SDK and authenticate Docker
         uses: google-github-actions/setup-gcloud@v2
         with:
-          # service_account_key는 Base64로 인코딩된 값을 secrets.GCP_SA_KEY에서 가져옵니다.
-          # base64_encoded_keys: true 옵션을 통해 액션이 이를 디코딩하도록 지시합니다.
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          base64_encoded_keys: true # ⭐ 이 줄이 핵심입니다. ⭐
+          # service_account는 Base64로 인코딩된 JSON 키 파일의 내용을 받습니다.
+          service_account: ${{ secrets.GCP_SA_KEY }}
 
           project_id: ${{ env.GCP_PROJECT_ID }}
-          # Docker 인증도 setup-gcloud 액션에서 직접 처리하도록 합니다.
-          docker_credentials: true
-
-      # 이전 gcloud auth configure-docker 스텝은 삭제되었습니다.
 
       - name: Debug GCloud Authentication Status
-        run: gcloud auth list # ⭐ 이 스텝으로 인증 성공 여부를 확인합니다. ⭐
+        run: gcloud auth list # 인증 상태를 확인합니다.
 
       - name: Build and Deploy to Cloud Run
         run: |
@@ -43,7 +37,7 @@ jobs:
           docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
 
           # Cloud Run 서비스에 배포합니다.
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
+          gcloud run deploy ${{ SERVICE_NAME }} \
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
