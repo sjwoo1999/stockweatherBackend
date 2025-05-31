@@ -19,17 +19,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Google Cloud SDK and authenticate Docker # 이름 변경 (선택 사항)
+      - name: Set up Google Cloud SDK and authenticate Docker
         uses: google-github-actions/setup-gcloud@v2
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ env.GCP_PROJECT_ID }}
-          # ⭐⭐⭐ 이 줄을 추가합니다. ⭐⭐⭐
-          docker_credentials: true
+          docker_credentials: true # Docker 인증을 setup-gcloud 액션에서 직접 처리
 
-      # ⭐⭐⭐ 이 스텝은 이제 필요 없으므로 완전히 삭제하거나 주석 처리합니다. ⭐⭐⭐
+      # gcloud auth configure-docker 스텝은 이제 필요 없으므로 삭제합니다.
       # - name: Authenticate Docker to Google Container Registry
       #   run: gcloud auth configure-docker
+
+      - name: Debug GCloud Authentication Status # ⭐ 디버깅을 위한 스텝 추가 ⭐
+        run: gcloud auth list
 
       - name: Build and Deploy to Cloud Run
         run: |
