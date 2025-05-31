@@ -22,22 +22,18 @@ jobs:
       - name: Set up Google Cloud SDK and authenticate Docker
         uses: google-github-actions/setup-gcloud@v2
         with:
-          # service_account는 Base64로 인코딩된 JSON 키 파일의 내용을 받습니다.
           service_account: ${{ secrets.GCP_SA_KEY }}
-
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Debug GCloud Authentication Status
-        run: gcloud auth list # 인증 상태를 확인합니다.
+        run: gcloud auth list
 
       - name: Build and Deploy to Cloud Run
         run: |
-          # Docker 이미지를 빌드하고 Artifact Registry(gcr.io)에 푸시합니다.
           docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
           docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
 
-          # Cloud Run 서비스에 배포합니다.
-          gcloud run deploy ${{ SERVICE_NAME }} \
+          gcloud run deploy ${{ env.SERVICE_NAME }} \ # ⭐ 이 줄을 수정합니다. SERVICE_NAME -> env.SERVICE_NAME ⭐
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
@@ -53,4 +49,4 @@ jobs:
               NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}, \
               KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }}, \
               KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}
-        working-directory: . # NestJS 프로젝트 루트 디렉토리에서 명령어 실행
+        working-directory: .
