@@ -8,7 +8,8 @@ on:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: ${{ secrets.GCP_REGION }}
+  # Artifact Registry 저장소가 asia-northeast3에 생성되었으므로, GCP_REGION도 이에 맞춥니다.
+  GCP_REGION: asia-northeast3 # ⭐ 여기에 실제 Artifact Registry 저장소 리전을 고정합니다. ⭐
   SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
 
 jobs:
@@ -41,11 +42,13 @@ jobs:
 
       - name: Build and Deploy to Cloud Run
         run: |
-          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
-          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+          # ⭐ docker build 시 이미지 이름에 asia.gcr.io를 명시합니다. ⭐
+          docker build -t asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
+          # ⭐ docker push 시에도 asia.gcr.io를 명시합니다. ⭐
+          docker push asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+            --image asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \ # ⭐ gcloud run deploy 시에도 asia.gcr.io를 명시합니다. ⭐
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
