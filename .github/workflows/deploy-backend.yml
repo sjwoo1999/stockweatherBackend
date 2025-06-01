@@ -46,21 +46,12 @@ jobs:
           docker build -t $IMAGE_NAME .
           docker push $IMAGE_NAME
 
+          # ⭐ --set-env-vars 뒤의 환경 변수들을 전체 큰따옴표로 묶어 하나의 문자열로 전달
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image $IMAGE_NAME \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
-            --set-env-vars \
-              DB_HOST=${{ secrets.DB_HOST }}, \
-              DB_PORT=${{ secrets.DB_PORT }}, \
-              DB_USERNAME=${{ secrets.DB_USERNAME }}, \
-              DB_DATABASE=${{ secrets.DB_DATABASE }}, \
-              DB_PASSWORD=${{ secrets.DB_PASSWORD }}, \
-              DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }}, \
-              NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}, \
-              NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}, \
-              KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }}, \
-              KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }} \
+            --set-env-vars "DB_HOST=${{ secrets.DB_HOST }},DB_PORT=${{ secrets.DB_PORT }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_DATABASE=${{ secrets.DB_DATABASE }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }},NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }},NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }},KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }},KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}" \
             --timeout=60s
         working-directory: .
