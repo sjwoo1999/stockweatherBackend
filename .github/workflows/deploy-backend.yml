@@ -28,13 +28,13 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
-          # ⭐ gcloud CLI 버전을 명시적으로 최신으로 지정하여 호환성 문제 해결 시도
-          # component-manager: true # 이 옵션은 기본값으로 설정된 경우가 많습니다.
-          # install-components: 'cloud-build-local' # 필요한 경우 추가. 현재 문제는 아닙니다.
+          # gcloud CLI 버전을 명시적으로 최신으로 지정하여 호환성 문제 해결 시도 (필요시 주석 해제)
+          # component-manager: true
+          # install-components: 'cloud-build-local'
 
-      - name: Configure Docker to use gcloud auth
-        # ⭐ --repository 플래그 제거
-        run: gcloud auth configure-docker
+      - name: Configure Docker to use gcloud auth (for Artifact Registry)
+        # ⭐ Artifact Registry 호스트를 명시적으로 지정하여 인증 설정
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: Debug GCloud Authentication Status
         run: gcloud auth list
