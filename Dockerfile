@@ -36,9 +36,9 @@ COPY --from=builder /app/package*.json ./
 # EXPOSE 3000
 
 # 환경 변수 설정 (Cloud Run에서 직접 설정할 것이므로 Dockerfile에는 기본값만)
-# Cloud Run은 런타임에 직접 환경 변수를 주입하므로 여기에 민감 정보를 직접 넣지 않습니다.
 ENV NODE_ENV production
-ENV PORT 3000 # NestJS가 이 PORT를 사용하도록 설정되어야 함
+# ⭐ 다음 라인을 삭제합니다. Cloud Run이 자동으로 PORT를 주입합니다.
+# ENV PORT 3000 
 
 # 애플리케이션 실행 명령어
 # NestJS package.json의 'start:prod' 스크립트 사용
