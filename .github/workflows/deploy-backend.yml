@@ -1,4 +1,3 @@
-# .github/workflows/deploy-backend.yml
 name: Deploy StockWeather Backend to Cloud Run
 
 on:
@@ -8,9 +7,9 @@ on:
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  # Artifact Registry 저장소가 asia-northeast3에 생성되었으므로, GCP_REGION도 이에 맞춥니다.
-  GCP_REGION: asia-northeast3 # ⭐ 여기에 실제 Artifact Registry 저장소 리전을 고정합니다. ⭐
+  GCP_REGION: asia-northeast3 # Artifact Registry와 Cloud Run의 리전을 일치시킵니다.
   SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
+  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy # ⭐ Artifact Registry 저장소 이름 (Cloud Build 기본값 또는 사용자 지정 필요)
 
 jobs:
   deploy:
@@ -20,35 +19,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ⭐⭐ 1. Google Cloud 인증을 전용 액션으로 처리합니다. ⭐⭐
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2 # auth 액션 사용
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }} # credentials_json으로 변경
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # ⭐⭐ 2. gcloud SDK를 설치합니다. ⭐⭐
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
-          # docker_credentials는 auth 액션에서 처리되므로 여기서는 필요 없습니다.
-          # install_components: 'cloud run' 같은 특정 컴포넌트만 설치할 수도 있습니다.
 
       - name: Configure Docker to use gcloud auth
-        run: gcloud auth configure-docker # Docker를 gcloud 인증과 연동합니다.
+        # ⭐ Artifact Registry 도메인으로 Docker 인증 구성
+        run: gcloud auth configure-docker --repository=${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: Debug GCloud Authentication Status
-        run: gcloud auth list # ⭐ 다시 한번 인증 상태를 확인합니다. ⭐
+        run: gcloud auth list
 
       - name: Build and Deploy to Cloud Run
         run: |
-          # ⭐ docker build 시 이미지 이름에 asia.gcr.io를 명시합니다. ⭐
-          docker build -t asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest .
-          # ⭐ docker push 시에도 asia.gcr.io를 명시합니다. ⭐
-          docker push asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+          # Artifact Registry 경로를 사용하여 이미지 빌드 및 태그 지정
+          IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
+          
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image asia.gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \ # ⭐ gcloud run deploy 시에도 asia.gcr.io를 명시합니다. ⭐
+            --image $IMAGE_NAME \ # ⭐ Artifact Registry 경로를 사용하여 이미지 참조
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
