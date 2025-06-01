@@ -3,13 +3,13 @@ name: Deploy StockWeather Backend to Cloud Run
 on:
   push:
     branches:
-      - main # main 브랜치에 푸시될 때마다 이 워크플로우 실행
+      - main
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: asia-northeast3 # Artifact Registry와 Cloud Run의 리전을 일치시킵니다.
-  SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
-  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy # ⭐ Artifact Registry 저장소 이름 (Cloud Build 기본값 또는 사용자 지정 필요)
+  GCP_REGION: asia-northeast3
+  SERVICE_NAME: stockweather-backend
+  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy
 
 jobs:
   deploy:
@@ -28,24 +28,26 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
+          # ⭐ gcloud CLI 버전을 명시적으로 최신으로 지정하여 호환성 문제 해결 시도
+          # component-manager: true # 이 옵션은 기본값으로 설정된 경우가 많습니다.
+          # install-components: 'cloud-build-local' # 필요한 경우 추가. 현재 문제는 아닙니다.
 
       - name: Configure Docker to use gcloud auth
-        # ⭐ Artifact Registry 도메인으로 Docker 인증 구성
-        run: gcloud auth configure-docker --repository=${{ env.GCP_REGION }}-docker.pkg.dev
+        # ⭐ --repository 플래그 제거
+        run: gcloud auth configure-docker
 
       - name: Debug GCloud Authentication Status
         run: gcloud auth list
 
       - name: Build and Deploy to Cloud Run
         run: |
-          # Artifact Registry 경로를 사용하여 이미지 빌드 및 태그 지정
           IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
           
           docker build -t $IMAGE_NAME .
           docker push $IMAGE_NAME
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image $IMAGE_NAME \ # ⭐ Artifact Registry 경로를 사용하여 이미지 참조
+            --image $IMAGE_NAME \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
@@ -59,5 +61,6 @@ jobs:
               NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}, \
               NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}, \
               KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }}, \
-              KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}
+              KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }} \
+            --timeout=60s
         working-directory: .
