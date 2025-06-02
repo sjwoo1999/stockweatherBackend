@@ -14,7 +14,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
   ) {
     super({
       clientID: configService.get<string>('KAKAO_CLIENT_ID'),
-      // clientSecret: configService.get<string>('KAKAO_CLIENT_SECRET'), // 필요하다면 여기에 추가
+      clientSecret: configService.get<string>('KAKAO_CLIENT_SECRET'), // 필요하다면 여기에 추가
       callbackURL: configService.get<string>('KAKAO_CALLBACK_URL'), // ⭐ 이 환경 변수 값을 정확히 설정해야 함
       scope: ['profile_nickname', 'profile_image', 'account_email'], // 필요한 스코프
     });

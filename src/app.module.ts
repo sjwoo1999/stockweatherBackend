@@ -1,19 +1,29 @@
 // stockweather-backend/src/app.module.ts
+
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
+// 기존 모듈 임포트
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { StockModule } from './stock/stock.module';
 
+// 새로 추가할 모듈 임포트
+import { NewsModule } from './news/news.module';           // ✨ 새로 추가 ✨
+import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ 새로 추가 ✨
+
 @Module({
   imports: [
+    // 환경 변수 설정을 위한 ConfigModule (가장 상단에 위치하는 것이 좋음)
     ConfigModule.forRoot({
-      isGlobal: true,
+      isGlobal: true, // 애플리케이션 전체에서 ConfigService를 사용할 수 있도록 전역 설정
       envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local',
     }),
+
+    // 데이터베이스 연결을 위한 TypeOrmModule
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -29,8 +39,6 @@ import { StockModule } from './stock/stock.module';
         console.log('DB_SSL_ENABLED:', configService.get<boolean>('DB_SSL_ENABLED'));
         console.log('-------------------------------------------');
 
-        // SSL 활성화 여부를 문자열로 가져와서 불리언으로 명확히 변환
-        // ConfigService.get<boolean>은 문자열 'false'를 true로 해석할 수 있음
         const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
         const sslEnabled = dbSslEnabledConfig === 'true';
 
@@ -44,20 +52,19 @@ import { StockModule } from './stock/stock.module';
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
           logging: configService.get<boolean>('DB_LOGGING', false),
-          // --- 이 부분이 핵심 수정 ---
-          // ssl 옵션은 TypeORM의 불리언 sslEnabled 값으로만 제어합니다.
-          // Cloud SQL Proxy를 통해 연결 시, 이 값은 `false`여야 합니다.
           ssl: sslEnabled,
-          // 'extra' 옵션에서 중복으로 'ssl'을 설정하지 않습니다.
-          // 필요한 경우 다른 추가 옵션을 여기에 추가할 수 있습니다.
-          // 예: extra: { max: 10 }
-          // ---------------------------
         };
       },
     }),
+
+    // 애플리케이션의 핵심 기능 모듈들
     AuthModule,
     UsersModule,
-    StockModule,
+    StockModule,      // StockModule은 NewsModule과 AIAnalysisModule을 내부적으로 사용하므로,
+                      // AppMoudle에선 StockModule만 임포트해도 됩니다.
+                      // 하지만 명시적인 구조와 앱 전체 로딩을 위해 하위 모듈도 여기에 추가하는 것이 일반적입니다.
+    NewsModule,       // ✨ NewsModule 추가 ✨
+    AIAnalysisModule, // ✨ AIAnalysisModule 추가 ✨
   ],
   controllers: [AppController],
   providers: [AppService],
