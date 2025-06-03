@@ -65,7 +65,9 @@ export class StockService {
       const allArticles: NewsArticle[] = [];
       for (const keyword of searchKeywords) {
         this.logger.log(`[StockService] Fetching news for keyword: "${keyword}"`);
-        const articles = await this.newsService.searchAllNews(keyword);
+        // 🚨 변경점: searchAllNews를 사용하여 네이버/구글 모두 검색
+        // NewsService의 searchAllNews 메서드를 사용하여 통합 뉴스 검색
+        const articles = await this.newsService.searchAllNews(keyword, 30); // 각 키워드당 최대 30개 뉴스
         allArticles.push(...articles);
         await this.delay(500); // API 과부하 방지
       }
@@ -73,7 +75,11 @@ export class StockService {
       // 중복 제거 (link 기준)
       const uniqueArticles: NewsArticle[] = Array.from(new Map(allArticles.map(item => [item.link, item])).values());
       
-      this.logger.log(`[StockService] Total unique articles collected: ${uniqueArticles.length}`);
+      // 🚨 추가점: AI 분석에 사용할 뉴스 개수 제한 (LLM 토큰 제한 및 관련성 고려)
+      // uniqueArticles는 이미 최신순으로 정렬되어 있으므로, 앞에서부터 필요한 만큼만 AI에 전달
+      const articlesForAI: NewsArticle[] = uniqueArticles.slice(0, 15); // AI에 전달할 뉴스 기사 개수 (조절 가능)
+
+      this.logger.log(`[StockService] Total unique articles collected: ${uniqueArticles.length}, Articles for AI analysis: ${articlesForAI.length}`);
 
       // 2. AI 분석 시작 알림 (AIAnalysisService 호출 직전)
       this.eventsGateway.sendAnalysisProgress(
@@ -85,7 +91,8 @@ export class StockService {
       this.logger.log(`[StockService] Notified client: AI analysis started for '${primaryName}'.`);
 
 
-      const analysisResult: AIAnalysisResult = await this.aiAnalysisService.analyzeStock(primaryName, uniqueArticles);
+      // 🚨 변경점: articlesForAI를 aiAnalysisService로 전달
+      const analysisResult: AIAnalysisResult = await this.aiAnalysisService.analyzeStock(primaryName, articlesForAI);
       this.logger.log(`[StockService] AI analysis completed for "${primaryName}".`);
 
       // AI 분석 결과의 overallSentiment를 기반으로 날씨 아이콘 결정
@@ -103,6 +110,9 @@ export class StockService {
       }
 
       // 최종 StockWeatherResponseDto 구성 시, articles 필드는 NewsArticleSummary[]로 변환하여 할당합니다.
+      // 여기서는 uniqueArticles(수집된 모든 고유 뉴스)를 사용하거나
+      // AI에 넘긴 articlesForAI를 사용하거나, 프론트엔드 UI에 맞춰 다시 슬라이스하여 전달할 수 있습니다.
+      // 여기서는 수집된 모든 고유 뉴스 중에서 TOP 5만 UI에 표시하도록 했습니다.
       const summarizedArticlesForDto: NewsArticleSummary[] = uniqueArticles.map(article => ({
         title: article.title,
         summary: article.description, // NewsArticle의 description을 summary로 사용
@@ -119,7 +129,7 @@ export class StockService {
           sentimentScore: analysisResult.sentimentScore || 0.5,
           keywords: analysisResult.keywords || [],
           reportSummary: analysisResult.reportSummary || "AI 분석 결과 요약.",
-          articles: summarizedArticlesForDto,
+          articles: summarizedArticlesForDto, // UI에 표시할 뉴스 요약
           detailedAnalysis: analysisResult.detailedAnalysis || "AI 분석 상세 내용.",
           investmentOpinion: analysisResult.investmentOpinion || { opinion: "관망", confidence: 0 },
           relatedStocks: analysisResult.relatedStocks || [],
@@ -129,7 +139,7 @@ export class StockService {
         timestamp: new Date().toISOString(),
         disclaimer: "본 분석은 AI 기반 예측치이며, 실제 투자 결과와 무관합니다. 투자 결정은 반드시 본인의 판단과 책임 하에 이루어져야 합니다.",
         query: userQuery,
-        newsCount: uniqueArticles.length,
+        newsCount: uniqueArticles.length, // 전체 수집된 고유 뉴스 기사 수
         socketId: clientId, // 최종 응답에도 socketId 포함
       };
 
