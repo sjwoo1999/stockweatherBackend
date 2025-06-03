@@ -12,8 +12,9 @@ import { UsersModule } from './users/users.module';
 import { StockModule } from './stock/stock.module';
 
 // 새로 추가할 모듈 임포트
-import { NewsModule } from './news/news.module';           // ✨ 새로 추가 ✨
-import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ 새로 추가 ✨
+import { NewsModule } from './news/news.module';
+import { AIAnalysisModule } from './ai-analysis/ai-analysis.module';
+import { EventsGateway } from './events/events.gateway'; // ✨ EventsGateway 임포트 ✨
 
 @Module({
   imports: [
@@ -67,6 +68,12 @@ import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ 새�
     AIAnalysisModule, // ✨ AIAnalysisModule 추가 ✨
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    EventsGateway, // ✨ EventsGateway를 providers에 추가 ✨
+  ],
+  exports: [
+    EventsGateway, // ✨ EventsGateway를 exports에 추가하여 다른 모듈에서 주입 가능하도록 설정 ✨
+  ],
 })
 export class AppModule {}

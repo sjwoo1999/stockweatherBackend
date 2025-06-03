@@ -1,50 +1,40 @@
-// stockweather-backend/src/stock/stock.controller.ts
-
-import { Controller, Get, Query, UseGuards, Req, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Post, Body, Res, HttpStatus, UseGuards } from '@nestjs/common';
 import { StockService } from './stock.service';
-import { StockSearchResult } from '../types/stock';
-import { Request } from 'express'; // req.user 타입 힌트를 위해 임포트 (필요한 경우)
+import { Response } from 'express'; // express Response 타입 임포트
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // JwtAuthGuard는 인증을 위해 필요합니다.
 
-@Controller('stock')
+@Controller('api') // 또는 'stock' 등 적절한 경로
 export class StockController {
   constructor(private readonly stockService: StockService) {}
 
-  @UseGuards(AuthGuard('jwt'))
-  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  @Post('search')
   async searchStock(
-    @Query('query') query: string,
-    @Req() req: Request
-  ): Promise<StockSearchResult> {
-    // 1. 입력 유효성 검사
-    if (!query || typeof query !== 'string' || query.trim().length === 0) {
-      throw new BadRequestException('검색어는 필수이며 유효한 문자열이어야 합니다.');
+    @Body('query') query: string,
+    @Body('socketId') socketId: string,
+    @Res() res: Response, // Express Response 객체를 주입받습니다.
+  ) {
+    if (!query || !socketId) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Query and socketId are required.' });
     }
+
+    console.log(`[Backend] Search request received for: '${query}' from socket ID: ${socketId}`);
 
     try {
-      // req.user에 대한 명시적인 타입이 없다면, 여기에서 바로 사용하지 않는 것이 좋습니다.
-      // const userId = (req.user as any)?.userId; // 예시: JWT 페이로드에서 userId 추출
-      // console.log(`[StockController] User ${userId} requested search for: ${query}`);
+      // StockService에서 실제 분석을 시작하고 즉시 HTTP 응답을 보냅니다.
+      // 분석 결과는 웹소켓을 통해 나중에 전송됩니다.
+      this.stockService.processStockAnalysis(query, socketId); // 비동기 작업 시작
 
-      const result = await this.stockService.searchStock(query);
-      return result;
+      return res.status(HttpStatus.ACCEPTED).json({ // HTTP 202 Accepted 응답
+        message: `Search request for '${query}' received. Processing will continue via WebSocket.`,
+        socketId: socketId,
+      });
     } catch (error) {
-      // 2. 에러 핸들링 강화
-      if (error instanceof NotFoundException) {
-        throw error;
-      } else if (error instanceof BadRequestException) {
-        throw error;
-      } else {
-        console.error(`[StockController] 검색 중 예상치 못한 오류 발생: ${error.message}`, error.stack);
-        throw new InternalServerErrorException('주식 정보를 검색하는 중 서버 오류가 발생했습니다.');
-      }
+      console.error('[Backend] Error initiating stock analysis:', error.message);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Failed to initiate stock analysis.',
+        error: error.message,
+      });
     }
   }
-
-  // 만약 나중에 특정 종목의 상세 정보를 ID로 가져오고 싶다면:
-  // @Get(':id')
-  // @UseGuards(AuthGuard('jwt'))
-  // async getStockById(@Param('id') id: string): Promise<StockSearchResult> {
-  //   // ... 서비스 호출 로직 ...
-  // }
 }

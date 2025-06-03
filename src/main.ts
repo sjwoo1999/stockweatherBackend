@@ -1,28 +1,28 @@
-// src/main.ts
+// stockweather-backend/src/main.ts
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  const logger = new Logger('NestApplication');
 
-  // CORS 설정
+  // WebSocket 어댑터 설정 (이전과 동일)
+  app.useWebSocketAdapter(new IoAdapter(app));
+
+  // CORS 설정 (프론트엔드와 통신을 위해 필요)
   app.enableCors({
-    origin: ['http://localhost:3001', 'https://stockweather-frontend.vercel.app'],
+    // ✨ 이 부분을 프론트엔드 URL에 맞게 수정합니다. ✨
+    // 현재 프론트엔드가 'http://localhost:3001'에서 실행되므로 이를 허용해야 합니다.
+    origin: 'http://localhost:3001', // 이전 'http://localhost:3000'에서 변경
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Cloud Run이 PORT 환경 변수를 주입하므로, 이 값을 사용합니다.
-  // 로컬 개발 환경을 위해 PORT 환경 변수가 없는 경우 3000을 기본값으로 사용합니다.
-  const port = configService.get<number>('PORT') || 3000;
-
-  // ⭐ 중요: 0.0.0.0에서 수신하도록 변경해야 합니다.
-  // Cloud Run은 컨테이너 내부의 0.0.0.0:PORT로 트래픽을 보냅니다.
-  await app.listen(port, '0.0.0.0'); // <-- 이 부분 수정!
-
-  console.log(`Application is running on: ${await app.getUrl()}`);
-  console.log(`Listening on port: ${port}`); // 어떤 포트에서 리스닝하는지 로그 추가 (디버깅용)
+  const port = process.env.PORT || 3000; // 백엔드 서버가 3000번 포트에서 실행될 것입니다.
+  await app.listen(port);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

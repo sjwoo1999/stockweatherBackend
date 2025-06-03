@@ -6,17 +6,19 @@ import { StockController } from './stock.controller';
 import { NewsModule } from '../news/news.module';
 import { AIAnalysisModule } from '../ai-analysis/ai-analysis.module';
 import { AuthModule } from '../auth/auth.module';
-import { KeywordMappingService } from './keyword-mapping.service'; // ✨ KeywordMappingService 임포트 필요 ✨
+import { KeywordMappingService } from './keyword-mapping.service';
+import { EventsModule } from 'src/events/events.module';
 
 @Module({
   imports: [
     NewsModule,
     AIAnalysisModule,
     AuthModule,
+    EventsModule, // EventsModule을 imports 배열에 추가합니다.
   ],
   providers: [
     StockService,
-    KeywordMappingService, // ✨ KeywordMappingService를 providers에 추가 ✨
+    KeywordMappingService,
   ],
   controllers: [StockController],
   exports: [StockService],
