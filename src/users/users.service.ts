@@ -1,9 +1,9 @@
-// src/users/users.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { StockSummary, StockDetail } from '../types/stock'; // 프론트엔드와 공유하는 타입
+// StockDetail 대신 StockData를 임포트합니다.
+import { StockSummary, StockData } from '../types/stock'; // 변경됨
 
 @Injectable()
 export class UsersService {
@@ -28,10 +28,8 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
 
-  // ⭐ 사용자 관심 종목 요약 정보를 가져오는 서비스 메서드 추가 ⭐
+  // 사용자 관심 종목 요약 정보를 가져오는 서비스 메서드 추가
   async getMockUserSummary(userId: number): Promise<StockSummary[]> {
-    // 실제 DB에서 userId에 해당하는 관심 종목 요약 정보를 가져오는 로직
-    // 여기서는 간단한 목업 데이터를 반환 (userId는 실제 사용 시 데이터를 필터링하는 데 사용)
     console.log(`UsersService: getMockUserSummary 호출됨 (사용자 ID: ${userId})`);
     return [
       {
@@ -46,17 +44,25 @@ export class UsersService {
     ];
   }
 
-  // ⭐ 사용자 관심 종목 상세 정보를 가져오는 서비스 메서드 추가 ⭐
-  async getMockUserDetail(userId: number): Promise<StockDetail[]> {
-    // 실제 DB에서 userId에 해당하는 관심 종목 상세 정보를 가져오는 로직
-    // 여기서는 간단한 목업 데이터를 반환 (userId는 실제 사용 시 데이터를 필터링하는 데 사용)
+  // 사용자 관심 종목 상세 정보를 가져오는 서비스 메서드 추가
+  // 반환 타입을 StockDetail[] 에서 StockData[] 로 변경하고, 목업 데이터 구조를 StockData에 맞게 변경합니다.
+  async getMockUserDetail(userId: number): Promise<StockData[]> { // 변경됨
     console.log(`UsersService: getMockUserDetail 호출됨 (사용자 ID: ${userId})`);
-    return [
-      { name: '삼성전자', emoji: '🔵', signal: '강력 매수', percent: '92%', color: 'text-blue-700' },
-      { name: '네이버', emoji: '🔷', signal: '매수', percent: '82%', color: 'text-blue-500' },
-      { name: '엔비디아', emoji: '⚪', signal: '중립', percent: '74%', color: 'text-gray-500' },
-      { name: '테슬라', emoji: '🟠', signal: '비중 축소', percent: '65%', color: 'text-orange-500' },
-      { name: '넷이즈', emoji: '🔴', signal: '매도', percent: '58%', color: 'text-red-500' },
-    ];
+    // StockData 인터페이스에 맞는 목업 데이터를 반환합니다.
+    const mockStockData: StockData = {
+        name: '삼성전자',
+        weatherSummary: 'AI 반도체 수요 급증으로 인한 긍정적인 전망입니다.',
+        overallSentiment: 'VERY_POSITIVE',
+        sentimentScore: 0.9,
+        keywords: [{ text: 'HBM', sentiment: 'POSITIVE' }, { text: '파운드리', sentiment: 'NEUTRAL' }],
+        reportSummary: '삼성전자의 HBM 반도체 기술 발전과 AI 시장 확대로 긍정적인 투자 의견이 지배적입니다.',
+        articles: [], // 실제 사용 시에는 NewsArticleSummary 객체로 채워야 합니다.
+        detailedAnalysis: '최근 삼성전자는 HBM3E 개발 성공 소식과 함께 AI 반도체 시장에서의 입지를 강화하고 있습니다. 이는 장기적인 성장 동력으로 작용할 것입니다.',
+        investmentOpinion: { opinion: '매수', confidence: 0.92 },
+        relatedStocks: [{ name: 'SK하이닉스', opinion: '추가 매수', confidence: 0.8 }],
+        overallNewsSummary: '삼성전자 관련 뉴스들은 AI 반도체와 HBM 기술에 대한 긍정적인 평가가 많았습니다.',
+    };
+
+    return [mockStockData]; // StockData 객체 배열을 반환합니다.
   }
 }

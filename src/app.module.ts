@@ -3,18 +3,18 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm'; // MongooseModule 대신 TypeOrmModule 사용 확인
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // 기존 모듈 임포트
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { StockModule } from './stock/stock.module';
 
-// 새로 추가할 모듈 임포트
+// 새로 추가 또는 확인 모듈 임포트
+import { StockModule } from './stock/stock.module';
 import { NewsModule } from './news/news.module';
-import { AIAnalysisModule } from './ai-analysis/ai-analysis.module';
-import { EventsGateway } from './events/events.gateway'; // ✨ EventsGateway 임포트 ✨
+import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ AiAnalysisModule (대소문자 일치) ✨
+import { EventsModule } from './events/events.module'; // ✨ EventsModule 임포트 ✨
 
 @Module({
   imports: [
@@ -24,12 +24,11 @@ import { EventsGateway } from './events/events.gateway'; // ✨ EventsGateway �
       envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local',
     }),
 
-    // 데이터베이스 연결을 위한 TypeOrmModule
+    // 데이터베이스 연결을 위한 TypeOrmModule (MongooseModule 대신 TypeOrmModule을 사용한다고 가정)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // 디버깅을 위해 로드되는 DB 정보를 콘솔에 출력합니다.
         console.log('--- DB Config Loaded (from app.module.ts) ---');
         console.log('DB_HOST:', configService.get<string>('DB_HOST'));
         console.log('DB_PORT:', configService.get<number>('DB_PORT'));
@@ -61,19 +60,18 @@ import { EventsGateway } from './events/events.gateway'; // ✨ EventsGateway �
     // 애플리케이션의 핵심 기능 모듈들
     AuthModule,
     UsersModule,
-    StockModule,      // StockModule은 NewsModule과 AIAnalysisModule을 내부적으로 사용하므로,
-                      // AppMoudle에선 StockModule만 임포트해도 됩니다.
-                      // 하지만 명시적인 구조와 앱 전체 로딩을 위해 하위 모듈도 여기에 추가하는 것이 일반적입니다.
-    NewsModule,       // ✨ NewsModule 추가 ✨
-    AIAnalysisModule, // ✨ AIAnalysisModule 추가 ✨
+    StockModule,      // StockModule은 NewsModule과 AIAnalysisModule, EventsModule을 내부적으로 임포트함
+    NewsModule,       // NewsModule 명시적 추가
+    AIAnalysisModule, // ✨ AiAnalysisModule (대소문자 주의) ✨
+    EventsModule,     // ✨ EventsModule 명시적 추가 ✨
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    EventsGateway, // ✨ EventsGateway를 providers에 추가 ✨
+    // ✨ EventsGateway는 EventsModule에서 관리되므로 여기서는 제거합니다. ✨
   ],
   exports: [
-    EventsGateway, // ✨ EventsGateway를 exports에 추가하여 다른 모듈에서 주입 가능하도록 설정 ✨
+    // ✨ EventsGateway는 EventsModule에서 export 되므로 여기서는 제거합니다. ✨
   ],
 })
 export class AppModule {}

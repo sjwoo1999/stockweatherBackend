@@ -2,27 +2,29 @@
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { IoAdapter } from '@nestjs/platform-socket.io';
-import { Logger } from '@nestjs/common';
+import { IoAdapter } from '@nestjs/platform-socket.io'; // Socket.IO 어댑터 임포트
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const logger = new Logger('NestApplication');
 
-  // WebSocket 어댑터 설정 (이전과 동일)
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // 전역 프리픽스 설정 (선택 사항, 필요하다면)
+  // app.setGlobalPrefix('api'); // 예를 들어, 모든 API 엔드포인트 앞에 '/api'를 붙임
 
-  // CORS 설정 (프론트엔드와 통신을 위해 필요)
+  // CORS (Cross-Origin Resource Sharing) 설정
+  // 프론트엔드(Next.js)가 실행되는 3001번 포트에서 요청을 허용하도록 설정
   app.enableCors({
-    // ✨ 이 부분을 프론트엔드 URL에 맞게 수정합니다. ✨
-    // 현재 프론트엔드가 'http://localhost:3001'에서 실행되므로 이를 허용해야 합니다.
-    origin: 'http://localhost:3001', // 이전 'http://localhost:3000'에서 변경
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    origin: 'http://localhost:3001', // ⭐ 프론트엔드 개발 서버의 주소
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // 허용할 HTTP 메서드
+    credentials: true, // 자격 증명(쿠키, 인증 헤더)을 주고받도록 허용
   });
 
-  const port = process.env.PORT || 3000; // 백엔드 서버가 3000번 포트에서 실행될 것입니다.
-  await app.listen(port);
-  logger.log(`Application is running on: ${await app.getUrl()}`);
+  // WebSocket Adapter 등록
+  // 이 어댑터는 app.listen()에 설정된 포트(3000번)를 사용하여 웹소켓 연결을 처리합니다.
+  // 이 코드는 enableCors() 다음에, app.listen() 이전에 위치해야 합니다.
+  app.useWebSocketAdapter(new IoAdapter(app));
+
+  // NestJS 애플리케이션 (HTTP 서버 및 WebSocket 서버)이 3000번 포트에서 리스닝하도록 설정
+  await app.listen(3000); // ⭐ 백엔드 서버가 리스닝할 포트
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
