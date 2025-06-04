@@ -72,6 +72,6 @@ jobs:
               FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
               DB_SYNCHRONIZE=false,\
               DB_LOGGING=false" \
-            --timeout=600s \  # <-- 여기에 '\'를 추가하여 다음 줄과 연결
-            --port 8080       # <-- 이 부분이 이제 gcloud 명령의 인자로 올바르게 인식됨
+            --timeout=600s \
+            --port 8080
         working-directory: .
