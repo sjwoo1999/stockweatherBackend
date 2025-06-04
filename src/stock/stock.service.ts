@@ -9,7 +9,6 @@ import {
   NewsArticle,
   AIAnalysisResult,
   NewsArticleSummary,
-  // StockData // 현재 코드에서 직접 사용되지 않으므로 제거
 } from '../types/stock';
 
 import { stockMappings, StockMapping } from './stock-data';
@@ -52,7 +51,7 @@ export class StockService {
 
       this.logger.log(`[StockService] Mapped to primaryName: "${primaryName}", Search Keywords: ${searchKeywords.join(', ')}`);
 
-      // 1. 뉴스 검색 시작 알림 (NewsService 호출 직전)
+      // 1. 뉴스 검색 시작 알림
       this.eventsGateway.sendAnalysisProgress(
         clientId,
         'NEWS_SEARCH_STARTED',
@@ -61,27 +60,47 @@ export class StockService {
       );
       this.logger.log(`[StockService] Notified client: News search started for '${primaryName}'.`);
 
+      // 🚨 변경점: 뉴스 검색 로직 최적화
+      // primaryName과 searchKeywords를 결합하여 단일 쿼리로 NewsService 호출
+      // Google CSE는 OR 연산자를 지원하므로, 여러 키워드를 'OR'로 연결하여 검색 범위를 확장
+      const combinedQuery = `${primaryName} ${searchKeywords.join(' OR ')}`; // 예: "삼성전자 반도체 OR HBM OR AI"
+      const NEWS_FETCH_LIMIT = 20; // AI 분석에 필요한 뉴스 기사 수 (조절 가능)
 
-      const allArticles: NewsArticle[] = [];
-      for (const keyword of searchKeywords) {
-        this.logger.log(`[StockService] Fetching news for keyword: "${keyword}"`);
-        // 🚨 변경점: searchAllNews를 사용하여 네이버/구글 모두 검색
-        // NewsService의 searchAllNews 메서드를 사용하여 통합 뉴스 검색
-        const articles = await this.newsService.searchAllNews(keyword, 30); // 각 키워드당 최대 30개 뉴스
-        allArticles.push(...articles);
-        await this.delay(500); // API 과부하 방지
+      this.logger.log(`[StockService] Combined news search query: "${combinedQuery}", fetching up to ${NEWS_FETCH_LIMIT} articles.`);
+
+      // NewsService의 searchAllNews 메서드가 이미 중복 제거, 최신순 정렬, limit 적용까지 해줌
+      const articlesForAI: NewsArticle[] = await this.newsService.searchAllNews(combinedQuery, NEWS_FETCH_LIMIT);
+
+      if (articlesForAI.length === 0) {
+        this.logger.warn(`[StockService] No news articles found for '${combinedQuery}'. Sending 'no news' response to client.`);
+        // 뉴스 기사가 없으므로 AI 분석 없이 바로 결과 반환 (또는 에러 처리)
+        this.eventsGateway.sendProcessingComplete(clientId, {
+          stock: {
+            name: primaryName,
+            weatherSummary: '관련 뉴스 기사를 찾을 수 없습니다.',
+            overallSentiment: 'UNKNOWN',
+            sentimentScore: 0,
+            keywords: [],
+            reportSummary: '분석에 필요한 뉴스 데이터가 부족합니다.',
+            articles: [], // 기사 없음
+            detailedAnalysis: { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '뉴스 기사가 없어 분석을 수행할 수 없습니다. 검색어를 다시 확인하거나, 나중에 다시 시도해주세요.' },
+            investmentOpinion: { opinion: '관망', confidence: 0 },
+            relatedStocks: [],
+            overallNewsSummary: `[${primaryName}] 관련 뉴스 기사 없음.`,
+          },
+          weatherIcon: 'unknown',
+          timestamp: new Date().toISOString(),
+          disclaimer: '뉴스 부족으로 인한 분석 불가.',
+          query: userQuery,
+          newsCount: 0,
+          socketId: clientId,
+        });
+        return;
       }
 
-      // 중복 제거 (link 기준)
-      const uniqueArticles: NewsArticle[] = Array.from(new Map(allArticles.map(item => [item.link, item])).values());
-      
-      // 🚨 추가점: AI 분석에 사용할 뉴스 개수 제한 (LLM 토큰 제한 및 관련성 고려)
-      // uniqueArticles는 이미 최신순으로 정렬되어 있으므로, 앞에서부터 필요한 만큼만 AI에 전달
-      const articlesForAI: NewsArticle[] = uniqueArticles.slice(0, 15); // AI에 전달할 뉴스 기사 개수 (조절 가능)
+      this.logger.log(`[StockService] Articles collected for AI analysis: ${articlesForAI.length} articles.`);
 
-      this.logger.log(`[StockService] Total unique articles collected: ${uniqueArticles.length}, Articles for AI analysis: ${articlesForAI.length}`);
-
-      // 2. AI 분석 시작 알림 (AIAnalysisService 호출 직전)
+      // 2. AI 분석 시작 알림
       this.eventsGateway.sendAnalysisProgress(
         clientId,
         'AI_ANALYSIS_STARTED',
@@ -90,8 +109,7 @@ export class StockService {
       );
       this.logger.log(`[StockService] Notified client: AI analysis started for '${primaryName}'.`);
 
-
-      // 🚨 변경점: articlesForAI를 aiAnalysisService로 전달
+      // AI 분석 요청
       const analysisResult: AIAnalysisResult = await this.aiAnalysisService.analyzeStock(primaryName, articlesForAI);
       this.logger.log(`[StockService] AI analysis completed for "${primaryName}".`);
 
@@ -110,27 +128,25 @@ export class StockService {
       }
 
       // 최종 StockWeatherResponseDto 구성 시, articles 필드는 NewsArticleSummary[]로 변환하여 할당합니다.
-      // 여기서는 uniqueArticles(수집된 모든 고유 뉴스)를 사용하거나
-      // AI에 넘긴 articlesForAI를 사용하거나, 프론트엔드 UI에 맞춰 다시 슬라이스하여 전달할 수 있습니다.
-      // 여기서는 수집된 모든 고유 뉴스 중에서 TOP 5만 UI에 표시하도록 했습니다.
-      const summarizedArticlesForDto: NewsArticleSummary[] = uniqueArticles.map(article => ({
+      // 여기서는 AI에 전달된 articlesForAI 중에서 TOP 5만 UI에 표시하도록 했습니다.
+      const summarizedArticlesForDto: NewsArticleSummary[] = articlesForAI.slice(0, 5).map(article => ({
         title: article.title,
-        summary: article.description, // NewsArticle의 description을 summary로 사용
+        summary: article.description,
         url: article.link,
         thumbnailUrl: article.thumbnail,
         sentiment: article.sentiment || 'UNKNOWN',
-      })).slice(0, 5); // TOP 5 뉴스만 전달 (프론트엔드 UI에 맞춰)
+      }));
 
       const finalResponse: StockWeatherResponseDto = {
         stock: {
           name: primaryName,
           weatherSummary: analysisResult.weatherSummary || "AI 분석 결과입니다.",
           overallSentiment: analysisResult.overallSentiment || "NEUTRAL",
-          sentimentScore: analysisResult.sentimentScore || 0.5,
+          sentimentScore: analysisResult.sentimentScore || 0,
           keywords: analysisResult.keywords || [],
           reportSummary: analysisResult.reportSummary || "AI 분석 결과 요약.",
-          articles: summarizedArticlesForDto, // UI에 표시할 뉴스 요약
-          detailedAnalysis: analysisResult.detailedAnalysis || "AI 분석 상세 내용.",
+          articles: summarizedArticlesForDto, // UI에 표시할 뉴스 요약 (최대 5개)
+          detailedAnalysis: analysisResult.detailedAnalysis || { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '' }, // 상세 분석 객체 초기화
           investmentOpinion: analysisResult.investmentOpinion || { opinion: "관망", confidence: 0 },
           relatedStocks: analysisResult.relatedStocks || [],
           overallNewsSummary: analysisResult.overallNewsSummary || `[${primaryName}] 관련 뉴스 요약 없음.`,
@@ -139,9 +155,15 @@ export class StockService {
         timestamp: new Date().toISOString(),
         disclaimer: "본 분석은 AI 기반 예측치이며, 실제 투자 결과와 무관합니다. 투자 결정은 반드시 본인의 판단과 책임 하에 이루어져야 합니다.",
         query: userQuery,
-        newsCount: uniqueArticles.length, // 전체 수집된 고유 뉴스 기사 수
+        newsCount: articlesForAI.length, // AI 분석에 사용된 고유 뉴스 기사 수
         socketId: clientId, // 최종 응답에도 socketId 포함
       };
+
+      // 🚨 디버깅을 위한 로그 추가: 최종 전송될 기사 수와 첫 번째 기사 제목 확인
+      this.logger.log(`[StockService] Sending final response for '${userQuery}' to client ${clientId}. Articles count: ${finalResponse.stock.articles.length}`);
+      if (finalResponse.stock.articles.length > 0) {
+        this.logger.debug(`[StockService] First article title (in finalResponse): "${finalResponse.stock.articles[0].title}"`);
+      }
 
       // 분석이 완료되면 Socket.IO를 통해 프론트엔드로 결과를 전송합니다.
       this.eventsGateway.sendProcessingComplete(clientId, finalResponse);
@@ -158,8 +180,8 @@ export class StockService {
           sentimentScore: 0,
           keywords: [],
           reportSummary: '데이터를 가져오거나 분석하는 중 문제가 발생했습니다.',
-          articles: [],
-          detailedAnalysis: '서비스에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          articles: [], // 에러 발생 시 기사 없음
+          detailedAnalysis: { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '서비스에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' },
           investmentOpinion: { opinion: '관망', confidence: 0 },
           relatedStocks: [],
           overallNewsSummary: `[${userQuery}] 뉴스 요약 실패.`,
@@ -170,7 +192,7 @@ export class StockService {
         error: `분석 실패: ${error.message || '알 수 없는 오류'}`,
         query: userQuery,
         newsCount: 0,
-        socketId: clientId, // 에러 응답에도 socketId 포함
+        socketId: clientId,
       };
       this.eventsGateway.sendProcessingComplete(clientId, errorResponse);
     }

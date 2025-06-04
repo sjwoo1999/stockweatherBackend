@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// stockweather-backend/src/users/users.service.ts
+
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-// StockDetail 대신 StockData를 임포트합니다.
-import { StockSummary, StockData } from '../types/stock'; // 변경됨
+import { StockData, NewsArticleSummary } from '../types/stock'; // 🚨 NewsArticleSummary 임포트 추가
 
 @Injectable()
 export class UsersService {
@@ -28,8 +33,7 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
 
-  // 사용자 관심 종목 요약 정보를 가져오는 서비스 메서드 추가
-  async getMockUserSummary(userId: number): Promise<StockSummary[]> {
+  async getMockUserSummary(userId: number): Promise<any[]> {
     console.log(`UsersService: getMockUserSummary 호출됨 (사용자 ID: ${userId})`);
     return [
       {
@@ -44,11 +48,8 @@ export class UsersService {
     ];
   }
 
-  // 사용자 관심 종목 상세 정보를 가져오는 서비스 메서드 추가
-  // 반환 타입을 StockDetail[] 에서 StockData[] 로 변경하고, 목업 데이터 구조를 StockData에 맞게 변경합니다.
-  async getMockUserDetail(userId: number): Promise<StockData[]> { // 변경됨
+  async getMockUserDetail(userId: number): Promise<StockData[]> {
     console.log(`UsersService: getMockUserDetail 호출됨 (사용자 ID: ${userId})`);
-    // StockData 인터페이스에 맞는 목업 데이터를 반환합니다.
     const mockStockData: StockData = {
         name: '삼성전자',
         weatherSummary: 'AI 반도체 수요 급증으로 인한 긍정적인 전망입니다.',
@@ -56,13 +57,66 @@ export class UsersService {
         sentimentScore: 0.9,
         keywords: [{ text: 'HBM', sentiment: 'POSITIVE' }, { text: '파운드리', sentiment: 'NEUTRAL' }],
         reportSummary: '삼성전자의 HBM 반도체 기술 발전과 AI 시장 확대로 긍정적인 투자 의견이 지배적입니다.',
-        articles: [], // 실제 사용 시에는 NewsArticleSummary 객체로 채워야 합니다.
-        detailedAnalysis: '최근 삼성전자는 HBM3E 개발 성공 소식과 함께 AI 반도체 시장에서의 입지를 강화하고 있습니다. 이는 장기적인 성장 동력으로 작용할 것입니다.',
+        // 🚨 FIX 3: Add mock news articles here for display
+        articles: [
+            {
+                title: '삼성전자, HBM3E 개발 성공... AI 반도체 시장 선점 가속화',
+                summary: '삼성전자가 고대역폭 메모리 HBM3E 개발에 성공하며 AI 반도체 시장에서의 입지를 더욱 강화하고 있습니다. 이는 엔비디아 등 주요 고객사에 공급될 예정입니다.',
+                url: 'https://mock-news.com/samsung-hbm3e',
+                thumbnailUrl: 'https://mock-news.com/thumb-samsung.jpg',
+                sentiment: 'POSITIVE'
+            } as NewsArticleSummary, // Type assertion for clarity
+            {
+                title: '파운드리 사업, 미중 갈등 속 성장세 유지',
+                summary: '미중 기술 갈등이 심화되는 가운데, 삼성전자 파운드리 사업부는 안정적인 고객 확보와 기술력으로 성장세를 이어가고 있다는 분석입니다.',
+                url: 'https://mock-news.com/samsung-foundry',
+                thumbnailUrl: 'https://mock-news.com/thumb-foundry.jpg',
+                sentiment: 'NEUTRAL'
+            } as NewsArticleSummary,
+        ],
+        detailedAnalysis: {
+            positiveFactors: '최근 삼성전자는 HBM3E 개발 성공 소식과 함께 AI 반도체 시장에서의 입지를 강화하고 있습니다. 이는 장기적인 성장 동력으로 작용할 것입니다.',
+            negativeFactors: '경쟁 심화와 글로벌 경기 둔화 가능성은 여전히 부정적인 요인으로 작용할 수 있습니다.',
+            neutralFactors: '특정 뉴스에서 언급된 시장 동향이나 규제 변화 등은 단기적인 영향이 불확실합니다.',
+            overallOpinion: '삼성전자는 HBM3E 개발과 AI 반도체 시장에서의 입지 강화로 긍정적인 성장 동력을 확보하고 있습니다. 그러나 경쟁 심화와 거시 경제 상황에 대한 지속적인 모니터링이 필요합니다.',
+        },
         investmentOpinion: { opinion: '매수', confidence: 0.92 },
-        relatedStocks: [{ name: 'SK하이닉스', opinion: '추가 매수', confidence: 0.8 }],
+        relatedStocks: [{ name: 'SK하이닉스', opinion: '추가 매수', confidence: 0.8, relationship: '주요 경쟁사' }],
         overallNewsSummary: '삼성전자 관련 뉴스들은 AI 반도체와 HBM 기술에 대한 긍정적인 평가가 많았습니다.',
     };
 
-    return [mockStockData]; // StockData 객체 배열을 반환합니다.
+    return [mockStockData];
+  }
+
+  async addFavoriteStock(userId: number, stockName: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.favoriteStocks) {
+        user.favoriteStocks = [];
+    }
+
+    if (user.favoriteStocks.includes(stockName)) {
+      throw new ConflictException('Stock already in favorites');
+    }
+
+    user.favoriteStocks.push(stockName);
+    return this.usersRepository.save(user);
+  }
+
+  async removeFavoriteStock(userId: number, stockName: string): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.favoriteStocks || !user.favoriteStocks.includes(stockName)) {
+        throw new NotFoundException('Stock not in favorites');
+    }
+
+    user.favoriteStocks = user.favoriteStocks.filter(stock => stock !== stockName);
+    await this.usersRepository.save(user);
   }
 }

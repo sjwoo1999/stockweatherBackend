@@ -1,54 +1,81 @@
-import { Controller, Get, Req, UseGuards, NotFoundException } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { UsersService } from './users.service';
-// StockDetail 대신 StockData를 임포트합니다.
-import { StockSummary, StockData } from '../types/stock'; // 변경됨
+// stockweather-backend/src/users/users.controller.ts
 
-@Controller('users') // 기본 경로를 'users'로 설정
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
-  @Get('me')
-  @UseGuards(AuthGuard('jwt'))
-  async getMe(@Req() req) {
-    const userId = req.user.id; // JwtStrategy에서 req.user에 주입한 ID 사용
-
-    console.log('GET /users/me 호출됨. req.user:', req.user);
-    console.log(`UsersController: 추출된 userId: ${userId}, 타입: ${typeof userId}`);
-
-    const user = await this.usersService.findById(userId);
-
-    if (!user) {
-      throw new NotFoundException('로그인된 사용자 정보를 찾을 수 없습니다.');
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    UseGuards,
+    Req,
+    Param,
+    Delete,
+    HttpCode,
+    HttpStatus,
+    NotFoundException, // Make sure this is imported
+    ConflictException,  // Make sure this is imported
+  } from '@nestjs/common';
+  import { UsersService } from './users.service';
+  import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+  import { Request } from 'express';
+  import { StockData } from '../types/stock';
+  import { User } from './user.entity'; // Ensure User entity is imported for type hinting
+  
+  @Controller('users')
+  export class UsersController {
+    constructor(private usersService: UsersService) {}
+  
+    // 🚨 FIX 1: Add or rename the endpoint to 'me' to match frontend request
+    @Get('me') // This will handle GET /users/me requests
+    @UseGuards(JwtAuthGuard)
+    async getProfile(@Req() req): Promise<User> {
+      // req.user contains the User entity object populated by JwtStrategy
+      // after successful authentication.
+      return req.user;
     }
-
-    return {
-      id: user.id,
-      kakaoId: user.kakaoId,
-      nickname: user.nickname,
-      email: user.email,
-      profileImage: user.profileImage,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+  
+    // If you also had a separate /users/profile endpoint and want to keep it,
+    // you can add it back, but 'me' is typically preferred for the authenticated user's profile.
+    /*
+    @Get('profile')
+    @UseGuards(JwtAuthGuard)
+    getOldProfile(@Req() req) {
+      return req.user;
+    }
+    */
+  
+    @Post('favorites')
+    @UseGuards(JwtAuthGuard)
+    async addFavorite(@Req() req, @Body('stockName') stockName: string) {
+      const user = await this.usersService.addFavoriteStock(req.user.id, stockName);
+      return { message: `${stockName}이(가) 관심 종목에 추가되었습니다.`, favorites: user.favoriteStocks };
+    }
+  
+    @Delete('favorites/:stockName')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async removeFavorite(@Req() req, @Param('stockName') stockName: string) {
+      await this.usersService.removeFavoriteStock(req.user.id, stockName);
+    }
+  
+    @Get('favorites')
+    @UseGuards(JwtAuthGuard)
+    async getFavorites(@Req() req) {
+      const user = await this.usersService.findById(req.user.id);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return { favorites: user.favoriteStocks };
+    }
+  
+    @Get('summary')
+    @UseGuards(JwtAuthGuard)
+    async getUserSummary(@Req() req): Promise<any[]> {
+      return this.usersService.getMockUserSummary(req.user.id);
+    }
+  
+    @Get('detail')
+    @UseGuards(JwtAuthGuard)
+    async getUserDetail(@Req() req): Promise<StockData[]> {
+      return this.usersService.getMockUserDetail(req.user.id);
+    }
   }
-
-  // 사용자 관심 종목 요약 API 추가
-  @Get('summary') // /users/summary
-  @UseGuards(AuthGuard('jwt'))
-  async getUserSummary(@Req() req): Promise<StockSummary[]> {
-    const userId = req.user.id; // 인증된 사용자 ID
-    console.log(`GET /users/summary 호출됨. 사용자 ID: ${userId}`);
-    return this.usersService.getMockUserSummary(userId); // UserService에 추가할 메서드
-  }
-
-  // 사용자 관심 종목 상세 API 추가
-  @Get('detail') // /users/detail
-  @UseGuards(AuthGuard('jwt'))
-  // 반환 타입을 StockDetail[] 에서 StockData[] 로 변경
-  async getUserDetail(@Req() req): Promise<StockData[]> { // 변경됨
-    const userId = req.user.id; // 인증된 사용자 ID
-    console.log(`GET /users/detail 호출됨. 사용자 ID: ${userId}`);
-    return this.usersService.getMockUserDetail(userId); // UserService에 추가할 메서드
-  }
-}

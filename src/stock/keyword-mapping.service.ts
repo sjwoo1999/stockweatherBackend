@@ -32,20 +32,30 @@ export class KeywordMappingService {
       }
     }
 
-    // 2. primaryName에 일치하는 것이 없으면, searchKeywords (연관 키워드)에 일치하는 매핑을 찾습니다.
+    // 2. 미리 정의된 keywords (사용자 입력 가능한 키워드)에 일치하는 매핑을 찾습니다.
+    for (const mapping of stockMappings) {
+        if (mapping.keywords.some(keyword => this.normalizeQuery(keyword) === normalizedUserQuery)) {
+            this.logger.debug(`[KeywordMappingService] Alias keyword match found for: "${userQuery}" -> "${mapping.primaryName}"`);
+            return mapping;
+        }
+    }
+
+    // 3. searchKeywords (뉴스 검색 키워드)에 일치하는 매핑을 찾습니다.
     //    예: '카카오뱅크' 입력 시 '카카오'의 searchKeywords에 포함될 경우
     for (const mapping of stockMappings) {
       if (mapping.searchKeywords.some(keyword => this.normalizeQuery(keyword) === normalizedUserQuery)) {
-        this.logger.debug(`[KeywordMappingService] Keyword match found for: "${userQuery}" -> "${mapping.primaryName}"`);
+        this.logger.debug(`[KeywordMappingService] Search keyword match found for: "${userQuery}" -> "${mapping.primaryName}"`);
         return mapping;
       }
     }
 
-    // 3. 미리 정의된 어떤 매핑에도 일치하지 않는 경우,
+
+    // 4. 미리 정의된 어떤 매핑에도 일치하지 않는 경우,
     //    사용자가 입력한 쿼리 자체를 primaryName으로 사용하고, 해당 쿼리만을 searchKeywords로 반환합니다.
     //    이 경우, AI 분석 및 뉴스 검색은 입력된 쿼리 하나로만 진행됩니다.
     this.logger.warn(`[KeywordMappingService] No specific mapping found for: "${userQuery}". Using raw query.`);
     return {
+      keywords: [userQuery], // 사용자가 입력한 키워드도 포함
       primaryName: userQuery,
       searchKeywords: [userQuery],
     };

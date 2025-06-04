@@ -1,91 +1,115 @@
 // stockweather-backend/src/types/stock.ts
 
-// 뉴스 기사 원본 또는 검색 결과의 형태
+// 이 파일은 백엔드에서 사용되는 모든 핵심 DTO 및 인터페이스를 정의합니다.
+
+/**
+ * 챗GPT API 응답을 위한 뉴스 기사 기본 인터페이스
+ * 이는 NewsService에서 파싱된 기사 정보를 담습니다.
+ */
 export interface NewsArticle {
     title: string;
-    originallink: string; // 네이버 뉴스 API에서 사용될 수 있음
-    link: string; // 최종 링크 URL
-    description: string; // 요약될 내용
-    pubDate?: string; // 발행일 (옵셔널)
-    sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'UNKNOWN'; // 감성 초기값
-    thumbnail?: string; // 썸네일 URL (옵셔널)
-  }
-  
-  // AI가 요약한 뉴스 기사 정보 (프론트엔드로 전달될 형태)
-  export interface NewsArticleSummary {
-    title: string;
-    summary: string; // AI가 요약한 내용
-    url: string;
-    thumbnailUrl?: string; // 썸네일 URL
-    sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'UNKNOWN'; // AI가 분석한 기사별 감성
-  }
-  
-  // AI 분석 결과에 포함될 키워드 감성 정보
-  export interface KeywordSentiment {
+    originallink: string; // 원본 링크 (네이버, 구글 등 제공)
+    link: string; // 실제 기사로 이동할 수 있는 링크 (originallink와 다를 수 있음)
+    description: string;
+    pubDate?: string; // 발행일 (RFC 2822 format 또는 ISO 8601 string)
+    thumbnail?: string; // 기사 썸네일 URL
+    sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'UNKNOWN'; // 뉴스 자체의 감성 분석 결과
+}
+
+/**
+ * AI 분석 결과를 담는 인터페이스
+ * 이 인터페이스는 StockData와 매우 유사하지만, AI 서비스의 직접적인 응답 형태를 나타냅니다.
+ * StockData는 최종 클라이언트에게 전달되는 형태로, AIAnalysisResult의 내용을 포함합니다.
+ */
+export interface AIAnalysisResult {
+    weatherSummary: string; // AI가 생성한 날씨 요약 (한 문장)
+    overallSentiment: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'UNKNOWN'; // 전반적 감성
+    sentimentScore: number; // 감성 점수 (0.0 ~ 1.0)
+    keywords: KeywordSentiment[]; // 핵심 키워드 및 감성
+    reportSummary: string; // 전체 분석 보고서 요약
+    detailedAnalysis: { // 상세 분석 (객체 타입으로 변경)
+        positiveFactors: string;
+        negativeFactors: string;
+        neutralFactors: string;
+        overallOpinion: string;
+    };
+    investmentOpinion: InvestmentOpinion; // 투자 의견
+    relatedStocks: RelatedStock[]; // 관련 주식
+    overallNewsSummary?: string; // 전체 뉴스 요약 (AI가 생성)
+}
+
+/**
+ * 키워드 및 해당 키워드의 감성 분석 결과
+ */
+export interface KeywordSentiment {
     text: string;
     sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
-  }
-  
-  // AI 분석 결과에 포함될 투자 의견
-  export interface InvestmentOpinion {
-    opinion: '매수' | '매도' | '유지' | '관망';
-    confidence: number; // 0.0 ~ 1.0
-  }
-  
-  // AI 분석 결과에 포함될 관련 종목 정보
-  export interface RelatedStock {
-    name: string;
-    opinion: '매수' | '매도' | '유지' | '관망' | '추가 매수' | '적정 매수'; // '추가 매수'와 '적정 매수' 추가
-    confidence: number;
-  }
-  
-  // ✨ AIAnalysisService가 반환하는 순수한 AI 분석 결과 인터페이스 ✨
-  export interface AIAnalysisResult {
-    weatherSummary: string;
-    overallSentiment: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'UNKNOWN';
-    sentimentScore: number;
-    keywords: KeywordSentiment[];
-    reportSummary: string;
-    detailedAnalysis: string;
-    investmentOpinion: InvestmentOpinion;
-    relatedStocks: RelatedStock[];
-    overallNewsSummary?: string; // ✨ AI가 요약한 전체 뉴스 요약 (새로 추가) ✨
-  }
-  
-  // ✨ 최종적으로 클라이언트에 전송될 주식 날씨 데이터의 'stock' 부분 (DTO 내부) ✨
-  export interface StockData {
-    name: string;
-    weatherSummary: string;
-    overallSentiment: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'UNKNOWN';
-    sentimentScore: number;
-    keywords: KeywordSentiment[];
-    reportSummary: string;
-    articles: NewsArticleSummary[]; // AI가 요약한 기사 목록
-    detailedAnalysis: string;
-    investmentOpinion: InvestmentOpinion;
-    relatedStocks: RelatedStock[];
-    overallNewsSummary?: string; // ✨ AIAnalysisResult에서 받은 전체 뉴스 요약 ✨
-  }
-  
-  // ✨ 클라이언트에 최종적으로 전송될 DTO (WebSocket 응답 형식) ✨
-  export interface StockWeatherResponseDto {
-    stock: StockData;
-    weatherIcon: 'sunny' | 'partly-cloudy' | 'cloudy' | 'rainy' | 'stormy' | 'unknown'; // StockService에서 결정
-    timestamp: string;
-    disclaimer: string;
-    error?: string; // 에러 발생 시 메시지
-    query?: string; // 원래 사용자 검색어
-    newsCount?: number; // 분석에 사용된 총 뉴스 기사 수 (추가 정보)
-    socketId?: string; // ⭐️ 중요: 이 필드를 추가해야 합니다.
-  }
+}
 
-  // ⭐ StockSummary 인터페이스를 추가합니다.
-  export interface StockSummary {
-    date?: string; // 예: '2025년 05월 24일'
-    overallSentiment?: string; // 예: '오늘은 당신의 투자에 긍정적인 바람이 불고 있어요.'
-    stocks: { // 관심 종목의 요약 정보를 담는 배열
-      name: string;
-      summary: string;
-      // 필요하다면 여기에 더 많은 요약 정보를 추가할 수 있습니다.
-    }[];
-  }
+/**
+ * 투자 의견
+ */
+export interface InvestmentOpinion {
+    opinion: '매수' | '적정 매수' | '관망' | '적정 매도' | '매도';
+    confidence: number; // 0.0 ~ 1.0
+    reason?: string; // 해당 의견의 근거
+}
+
+/**
+ * 관련 주식 정보
+ */
+export interface RelatedStock {
+    name: string;
+    opinion: '매수' | '매도' | '유지' | '관망' | '추가 매수' | '적정 매수'; // 관련 주식에 대한 투자 의견 (AI가 제시)
+    confidence: number; // 0.0 ~ 1.0
+    relationship?: string; // 해당 주식과의 관계 (예: 경쟁사, 협력사)
+}
+
+/**
+ * 뉴스 기사 요약 (클라이언트 전송용)
+ * NewsArticle에서 클라이언트에 필요한 정보만 추려낸 형태입니다.
+ */
+export interface NewsArticleSummary {
+    title: string;
+    summary: string; // description에 해당
+    url: string; // link에 해당
+    thumbnailUrl?: string; // thumbnail에 해당
+    sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'UNKNOWN'; // 뉴스 기사 자체의 감성
+}
+
+/**
+ * 주식 데이터의 핵심 구조 (AI 분석 결과를 담는 최종 DTO)
+ * 이 DTO는 클라이언트의 StockData와 동일한 구조를 가집니다.
+ */
+export interface StockData {
+    name: string; // 종목명
+    weatherSummary: string; // AI가 생성한 날씨 요약 (한 문장)
+    overallSentiment: 'VERY_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'VERY_NEGATIVE' | 'UNKNOWN'; // 전반적 감성
+    sentimentScore: number; // 감성 점수 (0.0 ~ 1.0)
+    keywords: KeywordSentiment[]; // 핵심 키워드 및 감성
+    reportSummary: string; // 전체 분석 보고서 요약
+    articles: NewsArticleSummary[]; // AI 분석에 사용된 뉴스 기사 요약 (클라이언트 전송용)
+    detailedAnalysis: { // 상세 분석 (객체 타입)
+        positiveFactors: string;
+        negativeFactors: string;
+        neutralFactors: string;
+        overallOpinion: string;
+    };
+    investmentOpinion: InvestmentOpinion; // 투자 의견
+    relatedStocks: RelatedStock[]; // 관련 주식
+    overallNewsSummary?: string; // 전체 뉴스 요약 (AI가 생성)
+}
+
+/**
+ * 클라이언트에 최종적으로 전송될 응답 DTO (WebSocket 응답 형식)
+ */
+export interface StockWeatherResponseDto {
+    stock: StockData;
+    weatherIcon: 'sunny' | 'partly-cloudy' | 'cloudy' | 'rainy' | 'stormy' | 'unknown';
+    timestamp: string; // ISO 8601 형식의 타임스탬프
+    disclaimer: string; // 면책 조항
+    error?: string; // 오류 발생 시 오류 메시지
+    query?: string; // 사용자가 검색한 원본 쿼리
+    newsCount?: number; // 분석에 사용된 뉴스 기사 수
+    socketId?: string; // 응답을 보낼 클라이언트의 Socket ID
+}
