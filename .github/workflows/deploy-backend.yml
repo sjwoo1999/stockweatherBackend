@@ -71,5 +71,5 @@ jobs:
               FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
               DB_SYNCHRONIZE=false,\
               DB_LOGGING=false" \
-            --timeout=60s
+            --timeout=300s
         working-directory: .
