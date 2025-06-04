@@ -17,7 +17,7 @@ import {
   
   // Logger만 @nestjs/common에서 임포트
   import { Logger } from '@nestjs/common';
-  import { StockWeatherResponseDto } from '../types/stock';
+  import { StockWeatherResponseDto } from '../types/stock'; // DTO 경로 확인
   
   // 클라이언트 -> 서버 이벤트 (현재는 사용하지 않지만 정의)
   interface ClientToServerEvents {
@@ -28,13 +28,22 @@ import {
   interface ServerToClientEvents {
     processingComplete: (data: StockWeatherResponseDto | { error: string, query?: string, socketId?: string }) => void;
     analysisProgress: (data: { status: string; message: string; query: string; socketId: string }) => void;
+    // ⭐ 추가: 'error' 이벤트 정의 (프론트엔드에서 사용될 수 있음)
+    error: (message: string) => void;
   }
   
   @WebSocketGateway({
+    // ⭐ CORS Origin 설정 수정: 모든 도메인 허용 대신 명시적 허용 ⭐
     cors: {
-      origin: '*', // 실제 배포 시에는 특정 도메인으로 제한하는 것이 좋습니다.
-      credentials: true,
+      origin: [
+        'http://localhost:3001', // 프론트엔드 로컬 개발 서버 주소
+        'https://stockweather-frontend.vercel.app', // Vercel에 배포된 프론트엔드 도메인
+        // 필요한 경우 다른 프론트엔드 도메인 추가
+      ],
+      methods: ['GET', 'POST'], // WebSocket 핸드셰이크에 주로 사용되는 메서드
+      credentials: true, // 자격 증명(쿠키, 인증 헤더 등) 허용
     },
+    // path: '/socket.io', // Socket.IO의 기본 경로, 명시적으로 설정해도 됨
   })
   export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server<ClientToServerEvents, ServerToClientEvents>;
@@ -46,26 +55,16 @@ import {
   
     handleConnection(client: Socket, ...args: any[]) {
       this.logger.log(`Client connected: ${client.id}`);
-      
+  
       // ⭐ 추가: 클라이언트 연결 시, 해당 소켓에 'disconnect' 이벤트 리스너를 추가
-      // 이 리스너는 클라이언트가 연결을 끊을 때 (또는 서버가 끊을 때) 'reason'과 함께 호출됩니다.
       client.on('disconnect', (reason) => {
-          this.logger.warn(`Client ${client.id} disconnected. Reason: ${reason}`);
-          // reason 예시:
-          // 'client namespace disconnect': 클라이언트가 명시적으로 socket.disconnect() 호출
-          // 'server namespace disconnect': 서버가 명시적으로 client.disconnect() 호출
-          // 'ping timeout': 클라이언트로부터 핑 응답이 없어 타임아웃 발생
-          // 'transport close': 기본 전송 계층(예: WebSocket)이 닫힘 (네트워크 문제 등)
-          // 'transport error': 전송 계층에서 오류 발생
-          // 'forced close': 서버가 모든 클라이언트를 강제로 닫음 (server.close())
+        this.logger.warn(`Client ${client.id} disconnected. Reason: ${reason}`);
       });
-
+  
       // 필요한 경우 클라이언트 연결 시 초기 로직 수행
     }
   
     handleDisconnect(client: Socket) {
-      // handleConnection에서 이미 disconnect reason을 로깅하도록 설정했으므로,
-      // 여기서는 추가적인 로깅은 생략하거나, 단지 정리 로직만 수행합니다.
       this.logger.log(`Client handleDisconnect called for client: ${client.id}`);
       // 클라이언트 연결 해제 시 정리 로직 수행
     }
