@@ -72,4 +72,5 @@ jobs:
               DB_SYNCHRONIZE=false,\
               DB_LOGGING=false" \
             --timeout=300s
+            --port 8080
         working-directory: .
