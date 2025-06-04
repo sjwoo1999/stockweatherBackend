@@ -34,7 +34,7 @@ jobs:
       uses: 'google-github-actions/auth@v1'
       with:
         workload_identity_provider: 'projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # 본인의 워크로드 아이덴티티 제공자 이름으로 변경
-        service_account: 'cloudrun-deployer@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com' # 본인의 서비스 계정 이메일로 변경
+        service_account: 'stockweather-db-connect@@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com' # 본인의 서비스 계정 이메일로 변경
 
     - name: Docker Login to Artifact Registry
       run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
