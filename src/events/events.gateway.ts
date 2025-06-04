@@ -46,11 +46,27 @@ import {
   
     handleConnection(client: Socket, ...args: any[]) {
       this.logger.log(`Client connected: ${client.id}`);
+      
+      // ⭐ 추가: 클라이언트 연결 시, 해당 소켓에 'disconnect' 이벤트 리스너를 추가
+      // 이 리스너는 클라이언트가 연결을 끊을 때 (또는 서버가 끊을 때) 'reason'과 함께 호출됩니다.
+      client.on('disconnect', (reason) => {
+          this.logger.warn(`Client ${client.id} disconnected. Reason: ${reason}`);
+          // reason 예시:
+          // 'client namespace disconnect': 클라이언트가 명시적으로 socket.disconnect() 호출
+          // 'server namespace disconnect': 서버가 명시적으로 client.disconnect() 호출
+          // 'ping timeout': 클라이언트로부터 핑 응답이 없어 타임아웃 발생
+          // 'transport close': 기본 전송 계층(예: WebSocket)이 닫힘 (네트워크 문제 등)
+          // 'transport error': 전송 계층에서 오류 발생
+          // 'forced close': 서버가 모든 클라이언트를 강제로 닫음 (server.close())
+      });
+
       // 필요한 경우 클라이언트 연결 시 초기 로직 수행
     }
   
     handleDisconnect(client: Socket) {
-      this.logger.log(`Client disconnected: ${client.id}`);
+      // handleConnection에서 이미 disconnect reason을 로깅하도록 설정했으므로,
+      // 여기서는 추가적인 로깅은 생략하거나, 단지 정리 로직만 수행합니다.
+      this.logger.log(`Client handleDisconnect called for client: ${client.id}`);
       // 클라이언트 연결 해제 시 정리 로직 수행
     }
   
