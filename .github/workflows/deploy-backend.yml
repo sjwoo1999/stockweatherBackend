@@ -47,11 +47,29 @@ jobs:
           docker push $IMAGE_NAME
 
           # ⭐ --set-env-vars 뒤의 환경 변수들을 전체 큰따옴표로 묶어 하나의 문자열로 전달
+          # ⭐ 모든 GitHub Secrets 변수와 배포 환경에 맞는 설정 (DB_SYNCHRONIZE, DB_LOGGING) 추가
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image $IMAGE_NAME \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
-            --set-env-vars "DB_HOST=${{ secrets.DB_HOST }},DB_PORT=${{ secrets.DB_PORT }},DB_USERNAME=${{ secrets.DB_USERNAME }},DB_DATABASE=${{ secrets.DB_DATABASE }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }},NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }},NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }},KOREA_INVEST_APP_KEY=${{ secrets.KOREA_INVEST_APP_KEY }},KOREA_INVEST_APP_SECRET=${{ secrets.KOREA_INVEST_APP_SECRET }}" \
+            --set-env-vars "DB_HOST=${{ secrets.DB_HOST }},\
+              DB_PORT=${{ secrets.DB_PORT }},\
+              DB_USERNAME=${{ secrets.DB_USERNAME }},\
+              DB_DATABASE=${{ secrets.DB_DATABASE }},\
+              DB_PASSWORD=${{ secrets.DB_PASSWORD }},\
+              DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }},\
+              NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }},\
+              NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }},\
+              KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }},\
+              KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }},\
+              KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }},\
+              JWT_SECRET=${{ secrets.JWT_SECRET }},\
+              GOOGLE_CSE_API_KEY=${{ secrets.GOOGLE_CSE_API_KEY }},\
+              GOOGLE_CSE_ID=${{ secrets.GOOGLE_CSE_ID }},\
+              CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }},\
+              FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
+              DB_SYNCHRONIZE=false,\
+              DB_LOGGING=false" \
             --timeout=60s
         working-directory: .
