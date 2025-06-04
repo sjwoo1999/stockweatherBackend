@@ -34,7 +34,7 @@ async function bootstrap() {
 
   // NestJS 애플리케이션 (HTTP 서버 및 WebSocket 서버)이 3000번 포트에서 리스닝하도록 설정
   // 배포 환경에서는 process.env.PORT를 사용하도록 고려할 수 있습니다.
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 8080;
   await app.listen(port);
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
