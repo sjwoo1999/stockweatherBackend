@@ -71,7 +71,8 @@ jobs:
               CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }},\
               FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
               DB_SYNCHRONIZE=false,\
-              DB_LOGGING=false" \
+              DB_LOGGING=false, \
+              PORT=8000" \
             --timeout=600s \
             --port 8080
         working-directory: .
