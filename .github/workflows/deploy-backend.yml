@@ -1,77 +1,75 @@
-name: Deploy StockWeather Backend to Cloud Run
+name: Deploy Backend to Cloud Run
 
 on:
   push:
     branches:
-      - main
+      - main # main 브랜치에 푸시될 때마다 워크플로우 실행
+    paths:
+      - 'backend/**' # backend 폴더 안의 파일 변경 시 트리거
 
 env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: asia-northeast3
-  SERVICE_NAME: stockweather-backend
-  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy
+  GCP_PROJECT_ID: stockweather # 본인의 GCP 프로젝트 ID로 변경
+  GCP_REGION: asia-northeast3 # Cloud Run을 배포할 리전
+  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy # Artifact Registry Repository 이름
+  SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # OIDC를 사용하여 GCP 인증을 위한 권한
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20' # 프로젝트에 맞는 Node.js 버전
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ env.GCP_PROJECT_ID }}
-          # gcloud CLI 버전을 명시적으로 최신으로 지정하여 호환성 문제 해결 시도 (필요시 주석 해제)
-          # component-manager: true
-          # install-components: 'cloud-build-local'
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: 'projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # 본인의 워크로드 아이덴티티 제공자 이름으로 변경
+        service_account: 'cloudrun-deployer@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com' # 본인의 서비스 계정 이메일로 변경
 
-      - name: Configure Docker to use gcloud auth (for Artifact Registry)
-        # ⭐ Artifact Registry 호스트를 명시적으로 지정하여 인증 설정
-        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+    - name: Docker Login to Artifact Registry
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
-      - name: Debug GCloud Authentication Status
-        run: gcloud auth list
+    - name: Build and Deploy to Cloud Run
+      run: |
+        IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
+        
+        docker build -t $IMAGE_NAME ./backend # Dockerfile이 backend 폴더 안에 있으므로 경로 지정
+        docker push $IMAGE_NAME
 
-      - name: Build and Deploy to Cloud Run
-        run: |
-          IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
-          
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
-
-          # ⭐ --set-env-vars 뒤의 환경 변수들을 전체 큰따옴표로 묶어 하나의 문자열로 전달
-          # ⭐ 모든 GitHub Secrets 변수와 배포 환경에 맞는 설정 (DB_SYNCHRONIZE, DB_LOGGING) 추가
-          # ⭐ 각 줄의 끝에 '\'를 붙여 명령이 계속됨을 명시하고, --port 8080을 추가합니다.
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image $IMAGE_NAME \
-            --platform managed \
-            --region ${{ env.GCP_REGION }} \
-            --allow-unauthenticated \
-            --set-env-vars "DB_HOST=${{ secrets.DB_HOST }},\
-              DB_PORT=${{ secrets.DB_PORT }},\
-              DB_USERNAME=${{ secrets.DB_USERNAME }},\
-              DB_DATABASE=${{ secrets.DB_DATABASE }},\
-              DB_PASSWORD=${{ secrets.DB_PASSWORD }},\
-              DB_SSL_ENABLED=${{ secrets.DB_SSL_ENABLED }},\
-              NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }},\
-              NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }},\
-              KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }},\
-              KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }},\
-              KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }},\
-              JWT_SECRET=${{ secrets.JWT_SECRET }},\
-              GOOGLE_CSE_API_KEY=${{ secrets.GOOGLE_CSE_API_KEY }},\
-              GOOGLE_CSE_ID=${{ secrets.GOOGLE_CSE_ID }},\
-              CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }},\
-              FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
-              DB_SYNCHRONIZE=false,\
-              DB_LOGGING=false" \
-            --timeout=600s \
-            --port 8080
-        working-directory: .
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image $IMAGE_NAME \
+          --platform managed \
+          --region ${{ env.GCP_REGION }} \
+          --allow-unauthenticated \
+          --add-cloudsql-instances ${{ env.GCP_PROJECT_ID }}:${{ env.GCP_REGION }}:${{ env.SERVICE_NAME }} \ # ⭐ Cloud SQL 연결 인스턴스 이름 (프로젝트ID:리전:서비스이름) ⭐
+          --set-env-vars "DB_HOST=127.0.0.1,\ # ⭐ Cloud Run에서 Cloud SQL 연결 시 호스트는 127.0.0.1 ⭐
+            DB_PORT=5432,\ # ⭐ Cloud Run에서 Cloud SQL 연결 시 포트는 5432 ⭐
+            DB_USERNAME=${{ secrets.DB_USERNAME }},\
+            DB_DATABASE=${{ secrets.DB_DATABASE }},\
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }},\
+            DB_SSL_ENABLED=false,\ # Cloud SQL 연결을 사용하면 SSL은 false로 둬도 됩니다.
+            NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }},\
+            NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }},\
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }},\
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }},\
+            KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }},\
+            JWT_SECRET=${{ secrets.JWT_SECRET }},\
+            GOOGLE_CSE_API_KEY=${{ secrets.GOOGLE_CSE_API_KEY }},\
+            GOOGLE_CSE_ID=${{ secrets.GOOGLE_CSE_ID }},\
+            CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }},\
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }},\ # 프론트엔드 URL (CORS 설정을 위해)
+            DB_SYNCHRONIZE=false,\
+            DB_LOGGING=false" \
+          --timeout=600s \
+          --port 8080 # 컨테이너가 8080 포트에서 리슨할 것임을 Cloud Run에 알림
+      working-directory: ./backend # backend 폴더에서 명령 실행
