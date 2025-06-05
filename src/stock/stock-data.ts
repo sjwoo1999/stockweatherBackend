@@ -3,6 +3,7 @@
 export interface StockMapping {
   keywords: string[]; // 사용자가 입력할 수 있는 키워드 (예: '삼성전자', '삼전')
   primaryName: string; // 실제 검색에 사용할 대표 종목명 (예: '삼성전자')
+  corpCode: string; // DART 공시 검색에 사용할 고유번호
   searchKeywords: string[]; // 뉴스 API 검색 시 사용할 키워드 목록 (더 넓은 범위의 연관 키워드 포함)
 }
 
@@ -16,6 +17,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['카카오', '카톡'],
     primaryName: '카카오',
+    corpCode: '00115049', // 카카오 DART 고유번호 (예시)
     searchKeywords: [
       '카카오', '카카오톡', '카카오뱅크', '카카오페이', '카카오게임즈', '다음카카오',
       '멜론', '카카오모빌리티', '택시', 'SM엔터', '플랫폼 규제', '핀테크', 'IT 플랫폼',
@@ -25,6 +27,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['네이버', 'Naver'],
     primaryName: '네이버',
+    corpCode: '00180665', // 네이버 DART 고유번호 (예시)
     searchKeywords: [
       '네이버', 'Naver', '라인', '웹툰', '네이버쇼핑', '검색엔진', '스마트스토어',
       '지식인', '블로그', '카페', '클로바', '하이퍼클로바X', 'AI', '서치GPT', '이커머스',
@@ -35,6 +38,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['삼성전자', '삼전', '삼성'],
     primaryName: '삼성전자',
+    corpCode: '00126380', // 삼성전자 DART 고유번호
     searchKeywords: [
       '삼성전자', '삼전', '삼성', '갤럭시', '반도체', '파운드리', 'D램', '낸드플래시',
       '스마트폰', '가전', 'AI 반도체', 'HBM', 'AP', '시스템반도체', '메모리 반도체',
@@ -44,6 +48,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['SK하이닉스', '하이닉스', 'SK Hynix'],
     primaryName: 'SK하이닉스',
+    corpCode: '00164742', // SK하이닉스 DART 고유번호 (예시)
     searchKeywords: [
       'SK하이닉스', '하이닉스', 'SK Hynix', 'HBM', '고대역폭 메모리', '메모리 반도체',
       'D램', '낸드플래시', 'AI 반도체', '엔비디아', '반도체 업황', '주가 전망', '실적 발표' // 추가 키워드
@@ -52,6 +57,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['LG전자', '엘지전자', 'LG'],
     primaryName: 'LG전자',
+    corpCode: '00115024', // LG전자 DART 고유번호 (예시)
     searchKeywords: [
       'LG전자', '엘지전자', 'LG', '가전', 'TV', '냉장고', '세탁기', '그램', '디오스',
       '휘센', '전장사업', '전기차 부품', 'VS사업본부', '스마트 가전', '로봇', '주가 전망', '실적 발표' // 추가 키워드
@@ -61,6 +67,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['현대차', '현대자동차', '현차'],
     primaryName: '현대차',
+    corpCode: '00164789', // 현대차 DART 고유번호 (예시)
     searchKeywords: [
       '현대차', '현대자동차', '현차', '아이오닉', '제네시스', '전기차', '수소차',
       '미국 시장', 'IRA', '자율주행', '로보택시', '전기차 전환', '주가 전망', '실적 발표', '정의선' // 추가 키워드
@@ -69,6 +76,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['기아', '기아차'],
     primaryName: '기아',
+    corpCode: '00164790', // 기아 DART 고유번호 (예시)
     searchKeywords: [
       '기아', '기아차', 'EV6', 'EV9', '셀토스', '스포티지', '레이', '전기차', 'PBV',
       '미국 시장', 'IRA', '판매량', '주가 전망', '실적 발표' // 추가 키워드
@@ -78,6 +86,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['LG에너지솔루션', '엘지에너지솔루션', 'LG엔솔'],
     primaryName: 'LG에너지솔루션',
+    corpCode: '01429991', // LG에너지솔루션 DART 고유번호 (예시)
     searchKeywords: [
       'LG에너지솔루션', '엘지에너지솔루션', 'LG엔솔', '배터리', '2차전지', '전기차 배터리',
       'ESS', '북미 시장', 'IRA', 'JV', '합작법인', '리튬이온', '전고체', '주가 전망', '실적 발표' // 추가 키워드
@@ -86,6 +95,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['삼성SDI', 'SDI'],
     primaryName: '삼성SDI',
+    corpCode: '00164784', // 삼성SDI DART 고유번호 (예시)
     searchKeywords: [
       '삼성SDI', 'SDI', '배터리', '2차전지', '전기차 배터리', 'ESS', '원통형 배터리',
       '전고체 배터리', '젠5', '주가 전망', '실적 발표' // 추가 키워드
@@ -94,6 +104,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['SK온', 'SK On'],
     primaryName: 'SK온',
+    corpCode: '01429991', // SK온은 SK이노베이션의 자회사이므로 SK이노베이션 고유번호 (예시)
     searchKeywords: [
       'SK온', 'SK On', '배터리', '2차전지', '전기차 배터리', '포드', '현대차',
       'JV', 'SK이노베이션', '주가 전망', '실적 발표' // 추가 키워드
@@ -102,6 +113,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['에코프로비엠', '에코프로BM', '에코프로'],
     primaryName: '에코프로비엠',
+    corpCode: '00980489', // 에코프로비엠 DART 고유번호 (예시)
     searchKeywords: [
       '에코프로비엠', '에코프로BM', '에코프로', '양극재', '2차전지 소재', '배터리 소재',
       '전기차', '에코프로그룹', '주가 전망', '실적 발표' // 추가 키워드
@@ -110,6 +122,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['포스코퓨처엠', '포퓨', '퓨처엠'],
     primaryName: '포스코퓨처엠',
+    corpCode: '00150244', // 포스코퓨처엠 DART 고유번호 (예시)
     searchKeywords: [
       '포스코퓨처엠', '포퓨', '퓨처엠', '양극재', '음극재', '2차전지 소재', '배터리 소재',
       '리튬', '니켈', '철강', '주가 전망', '실적 발표' // 추가 키워드
@@ -119,6 +132,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['삼성바이오로직스', '삼바', '바이오로직스'],
     primaryName: '삼성바이오로직스',
+    corpCode: '00130985', // 삼성바이오로직스 DART 고유번호 (예시)
     searchKeywords: [
       '삼성바이오로직스', '삼바', '바이오로직스', 'CDMO', '위탁생산', '바이오의약품',
       'ADC', 'mRNA', '바이오 산업', '주가 전망', '실적 발표' // 추가 키워드
@@ -127,6 +141,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['셀트리온'],
     primaryName: '셀트리온',
+    corpCode: '00295192', // 셀트리온 DART 고유번호 (예시)
     searchKeywords: [
       '셀트리온', '바이오시밀러', '제약', '바이오', '램시마', '트룩시마', '렉키로나',
       '합병', '주가 전망', '실적 발표' // 추가 키워드
@@ -136,6 +151,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['KB금융', 'KB', '국민은행'],
     primaryName: 'KB금융',
+    corpCode: '00171804', // KB금융 DART 고유번호 (예시)
     searchKeywords: [
       'KB금융', 'KB', '국민은행', '은행주', '금융지주', '금리 인상', '대출',
       '핀테크', '해외 사업', '주가 전망', '실적 발표' // 추가 키워드
@@ -144,6 +160,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['신한지주', '신한은행', '신한금융'],
     primaryName: '신한지주',
+    corpCode: '00171806', // 신한지주 DART 고유번호 (예시)
     searchKeywords: [
       '신한지주', '신한은행', '신한금융', '은행주', '금융지주', '금리 인상', '대출',
       '디지털 금융', '마이데이터', '주가 전망', '실적 발표' // 추가 키워드
@@ -153,6 +170,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['POSCO홀딩스', '포스코홀딩스', '포스코'],
     primaryName: 'POSCO홀딩스',
+    corpCode: '00126380', // POSCO홀딩스 DART 고유번호 (예시)
     searchKeywords: [
       'POSCO홀딩스', '포스코홀딩스', '포스코', '철강', '리튬', '2차전지 소재',
       '친환경 소재', '수소환원제철', '주가 전망', '실적 발표' // 추가 키워드
@@ -161,6 +179,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['현대모비스', '모비스'],
     primaryName: '현대모비스',
+    corpCode: '00164791', // 현대모비스 DART 고유번호 (예시)
     searchKeywords: [
       '현대모비스', '모비스', '현대차그룹', '자동차 부품', '모듈', '전장', '자율주행',
       '수소연료전지', '주가 전망', '실적 발표' // 추가 키워드
@@ -169,6 +188,7 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['LG화학', '엘지화학'],
     primaryName: 'LG화학',
+    corpCode: '00126380', // LG화학 DART 고유번호 (예시)
     searchKeywords: [
       'LG화학', '엘지화학', '화학', '배터리 소재', '첨단 소재', '석유화학',
       'NCC', '친환경 소재', '주가 전망', '실적 발표' // 추가 키워드
@@ -177,85 +197,10 @@ export const stockMappings: StockMapping[] = [
   {
     keywords: ['KT&G', '케이티앤지'],
     primaryName: 'KT&G',
+    corpCode: '00100650', // KT&G DART 고유번호 (예시)
     searchKeywords: [
       'KT&G', '케이티앤지', '담배', '궐련형 전자담배', '릴', '홍삼', '정관장',
       '해외 수출', '주가 전망', '실적 발표' // 추가 키워드
     ],
   },
-  // --- 테마성 키워드 (종목 코드는 없지만 관련 뉴스 검색) ---
-  {
-    keywords: ['AI', '인공지능'],
-    primaryName: 'AI',
-    searchKeywords: [
-      '인공지능', 'AI', 'GPT', '거대언어모델', 'LLM', 'AI 반도체', '챗봇', '로봇',
-      'AI 투자', 'AI 기술', 'AI 산업', '인공지능 테마' // 추가 키워드
-    ],
-  },
-  {
-    keywords: ['2차 전지', '이차전지'],
-    primaryName: '2차 전지',
-    searchKeywords: [
-      '2차 전지', '이차전지', '배터리', '양극재', '음극재', '분리막', '전해액',
-      '리튬이온', '전고체 배터리', 'LFP 배터리', '배터리 소재', '전기차', 'ESS' // 추가 키워드
-    ],
-  },
-  {
-    keywords: ['메타버스'],
-    primaryName: '메타버스',
-    searchKeywords: [
-      '메타버스', 'VR', 'AR', '가상현실', '확장현실', '블록체인', 'NFT', '가상화폐',
-      '메타버스 플랫폼', '메타버스 산업' // 추가 키워드
-    ],
-  },
-  {
-    keywords: ['로봇'],
-    primaryName: '로봇',
-    searchKeywords: [
-      '로봇', '로봇산업', '로봇주', '휴머노이드 로봇', '산업용 로봇', '협동 로봇',
-      '서비스 로봇', '로봇 기술', '로봇 테마' // 추가 키워드
-    ],
-  },
-  {
-    keywords: ['자율주행'],
-    primaryName: '자율주행',
-    searchKeywords: [
-      '자율주행', '자율주행차', 'ADAS', '레벨3', '레벨4', '자율주행기술',
-      '차량용 반도체', 'V2X', '모빌리티' // 추가 키워드
-    ],
-  },
-  {
-    keywords: ['엔비디아', 'nvidia'],
-    primaryName: '엔비디아',
-    searchKeywords: ['엔비디아', 'nvidia', 'GPU', 'AI 반도체', 'HBM', '데이터센터', 'GTC', '젠슨 황', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['테슬라', 'tesla'],
-    primaryName: '테슬라',
-    searchKeywords: ['테슬라', 'tesla', '전기차', 'FSD', '자율주행', '기가팩토리', '일론 머스크', '사이버트럭', '로보택시', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['애플', 'apple'],
-    primaryName: '애플',
-    searchKeywords: ['애플', 'apple', '아이폰', '비전 프로', '맥', '서비스 사업', 'WWDC', '팀 쿡', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['마이크로소프트', 'MS', 'microsoft'],
-    primaryName: '마이크로소프트',
-    searchKeywords: ['마이크로소프트', 'MS', 'microsoft', '애저', 'Azure', '클라우드', '오피스', '윈도우', 'AI', '코파일럿', '사티아 나델라', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['아마존', 'amazon'],
-    primaryName: '아마존',
-    searchKeywords: ['아마존', 'amazon', 'AWS', '이커머스', '클라우드', '프라임', '물류', '제프 베이조스', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['알파벳', '구글', 'alphabet', 'google'],
-    primaryName: '알파벳',
-    searchKeywords: ['알파벳', '구글', 'google', '안드로이드', '유튜브', '크롬', 'AI', '바드', '제미니', '광고', '주가 전망', '실적 발표'],
-  },
-  {
-    keywords: ['메타', 'meta', '페이스북', 'facebook'],
-    primaryName: '메타',
-    searchKeywords: ['메타', 'meta', '페이스북', 'facebook', '인스타그램', '왓츠앱', '메타버스', 'VR', 'AR', '마크 저커버그', '주가 전망', '실적 발표'],
-  },
-];
+]

@@ -1,26 +1,30 @@
-// stockweather-backend/src/stock/stock.module.ts
+// src/stock/stock.module.ts
 
-import { Module, forwardRef } from '@nestjs/common'; // ✨ forwardRef 임포트 ✨
+import { Module, forwardRef } from '@nestjs/common';
 import { StockService } from './stock.service';
 import { StockController } from './stock.controller';
-import { NewsModule } from '../news/news.module';
 import { AIAnalysisModule } from '../ai-analysis/ai-analysis.module';
 import { AuthModule } from '../auth/auth.module';
 import { KeywordMappingService } from './keyword-mapping.service';
-import { EventsModule } from '../events/events.module'; // ✨ 상대 경로 확인: '../events/events.module' ✨
+import { EventsModule } from '../events/events.module';
+import { DisclosureModule } from '../disclosure/disclosure.module';
+import { ConfigModule } from '@nestjs/config';
+import { UsersModule } from '../users/users.module'; // ⭐ 추가: UsersModule 임포트 ⭐
 
 @Module({
   imports: [
-    NewsModule,
-    forwardRef(() => AIAnalysisModule), // ✨ StockService가 AIAnalysisService를 사용하므로 (순환 참조 가능성 고려) ✨
+    forwardRef(() => AIAnalysisModule),
     AuthModule,
-    forwardRef(() => EventsModule), // ✨ StockService가 EventsGateway를 사용하므로 (순환 참조 가능성 고려) ✨
+    forwardRef(() => EventsModule),
+    DisclosureModule,
+    ConfigModule,
+    UsersModule, // ⭐ 중요: UsersModule 추가 ⭐
   ],
   providers: [
     StockService,
-    KeywordMappingService, // KeywordMappingService도 providers에 포함되어야 함
+    KeywordMappingService,
   ],
   controllers: [StockController],
-  exports: [StockService], // StockService를 다른 모듈에서 사용한다면 export
+  exports: [StockService],
 })
 export class StockModule {}

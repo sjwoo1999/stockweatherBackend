@@ -1,10 +1,16 @@
 // src/ai-analysis/ai-analysis.module.ts
 
-import { Module } from '@nestjs/common';
-import { AIAnalysisService } from './ai-analysis.service'; // AIAnalysisService 임포트
+import { Module, forwardRef } from '@nestjs/common'; // ⭐ forwardRef를 임포트합니다. ⭐
+import { AIAnalysisService } from './ai-analysis.service';
+import { ConfigModule } from '@nestjs/config'; // ConfigService를 사용하므로 ConfigModule이 필요합니다.
+import { EventsModule } from '../events/events.module'; // ⭐ EventsModule을 임포트합니다. ⭐
 
 @Module({
-  providers: [AIAnalysisService], // AIAnalysisService를 이 모듈의 '제공자'로 등록합니다.
-  exports: [AIAnalysisService],   // 다른 모듈에서 AIAnalysisService를 사용할 수 있도록 '내보냅니다'.
+  imports: [
+    ConfigModule, // AIAnalysisService에서 ConfigService를 사용하므로 ConfigModule을 임포트합니다.
+    forwardRef(() => EventsModule), // ⭐ EventsGateway를 사용하므로 EventsModule을 임포트합니다. ⭐
+  ],
+  providers: [AIAnalysisService],
+  exports: [AIAnalysisService],
 })
 export class AIAnalysisModule {}

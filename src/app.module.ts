@@ -12,7 +12,6 @@ import { UsersModule } from './users/users.module';
 
 // 새로 추가 또는 확인 모듈 임포트
 import { StockModule } from './stock/stock.module';
-import { NewsModule } from './news/news.module';
 import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ AiAnalysisModule (대소문자 일치) ✨
 import { EventsModule } from './events/events.module'; // ✨ EventsModule 임포트 ✨
 
@@ -61,7 +60,7 @@ import { EventsModule } from './events/events.module'; // ✨ EventsModule 임�
     AuthModule,
     UsersModule,
     StockModule,      // StockModule은 NewsModule과 AIAnalysisModule, EventsModule을 내부적으로 임포트함
-    NewsModule,       // NewsModule 명시적 추가
+    // NewsModule,       // NewsModule 명시적 추가
     AIAnalysisModule, // ✨ AiAnalysisModule (대소문자 주의) ✨
     EventsModule,     // ✨ EventsModule 명시적 추가 ✨
   ],

@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { StockData, NewsArticleSummary } from '../types/stock'; // 🚨 NewsArticleSummary 임포트 추가
+import { StockData } from '../types/stock'; // ⭐ NewsArticleSummary 임포트 제거 ⭐
 
 @Injectable()
 export class UsersService {
@@ -57,23 +57,7 @@ export class UsersService {
         sentimentScore: 0.9,
         keywords: [{ text: 'HBM', sentiment: 'POSITIVE' }, { text: '파운드리', sentiment: 'NEUTRAL' }],
         reportSummary: '삼성전자의 HBM 반도체 기술 발전과 AI 시장 확대로 긍정적인 투자 의견이 지배적입니다.',
-        // 🚨 FIX 3: Add mock news articles here for display
-        articles: [
-            {
-                title: '삼성전자, HBM3E 개발 성공... AI 반도체 시장 선점 가속화',
-                summary: '삼성전자가 고대역폭 메모리 HBM3E 개발에 성공하며 AI 반도체 시장에서의 입지를 더욱 강화하고 있습니다. 이는 엔비디아 등 주요 고객사에 공급될 예정입니다.',
-                url: 'https://mock-news.com/samsung-hbm3e',
-                thumbnailUrl: 'https://mock-news.com/thumb-samsung.jpg',
-                sentiment: 'POSITIVE'
-            } as NewsArticleSummary, // Type assertion for clarity
-            {
-                title: '파운드리 사업, 미중 갈등 속 성장세 유지',
-                summary: '미중 기술 갈등이 심화되는 가운데, 삼성전자 파운드리 사업부는 안정적인 고객 확보와 기술력으로 성장세를 이어가고 있다는 분석입니다.',
-                url: 'https://mock-news.com/samsung-foundry',
-                thumbnailUrl: 'https://mock-news.com/thumb-foundry.jpg',
-                sentiment: 'NEUTRAL'
-            } as NewsArticleSummary,
-        ],
+        // ⭐ articles 필드 제거 ⭐
         detailedAnalysis: {
             positiveFactors: '최근 삼성전자는 HBM3E 개발 성공 소식과 함께 AI 반도체 시장에서의 입지를 강화하고 있습니다. 이는 장기적인 성장 동력으로 작용할 것입니다.',
             negativeFactors: '경쟁 심화와 글로벌 경기 둔화 가능성은 여전히 부정적인 요인으로 작용할 수 있습니다.',
@@ -82,7 +66,7 @@ export class UsersService {
         },
         investmentOpinion: { opinion: '매수', confidence: 0.92 },
         relatedStocks: [{ name: 'SK하이닉스', opinion: '추가 매수', confidence: 0.8, relationship: '주요 경쟁사' }],
-        overallNewsSummary: '삼성전자 관련 뉴스들은 AI 반도체와 HBM 기술에 대한 긍정적인 평가가 많았습니다.',
+        // ⭐ overallNewsSummary 필드 제거 ⭐
     };
 
     return [mockStockData];

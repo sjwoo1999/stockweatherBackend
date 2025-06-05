@@ -1,200 +1,281 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import { NewsService } from '../news/news.service';
+// stockweather-backend/src/stock/stock.service.ts
+
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AIAnalysisService } from '../ai-analysis/ai-analysis.service';
-import { KeywordMappingService } from './keyword-mapping.service';
 import { EventsGateway } from '../events/events.gateway';
+import { KeywordMappingService } from './keyword-mapping.service';
+import { DisclosureService, DartCompanyInfo } from '../disclosure/disclosure.service';
+import { UsersService } from '../users/users.service';
 
 import {
   StockWeatherResponseDto,
-  NewsArticle,
-  AIAnalysisResult,
-  NewsArticleSummary,
-} from '../types/stock';
+  StockData,
+  AIAnalysisResult, // AIAnalysisResult는 백엔드 전용이므로 백엔드 types/stock에 정의되어 있다고 가정합니다.
+} from '../types/stock'; // 백엔드의 types/stock.ts에서 DTO를 가져옵니다.
 
-import { stockMappings, StockMapping } from './stock-data';
+import { DisclosureItem } from '../disclosure/interfaces/disclosure-item.interface'; // 올바른 DisclosureItem 임포트
 
 @Injectable()
 export class StockService {
   private readonly logger = new Logger(StockService.name);
 
   constructor(
-    private readonly newsService: NewsService,
-    private readonly aiAnalysisService: AIAnalysisService,
-    private readonly keywordMappingService: KeywordMappingService,
-    private readonly eventsGateway: EventsGateway,
+    @Inject(forwardRef(() => AIAnalysisService))
+    private aiAnalysisService: AIAnalysisService,
+    private eventsGateway: EventsGateway,
+    private keywordMappingService: KeywordMappingService,
+    private disclosureService: DisclosureService,
+    private configService: ConfigService,
+    private usersService: UsersService,
   ) {}
 
-  private async delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   /**
-   * 사용자 쿼리를 기반으로 주식 관련 뉴스 검색 및 AI 분석을 비동기적으로 수행합니다.
-   * 이 메서드는 HTTP 응답과 별개로 백그라운드에서 실행되며,
-   * 최종 결과는 WebSocket을 통해 클라이언트에게 전송됩니다.
-   * @param userQuery 사용자 입력 검색어 (예: "카카오", "삼성전자")
-   * @param clientId 데이터를 요청한 클라이언트의 Socket ID (WebSockets 통신용)
+   * 주식 분석 데이터를 가져오고 WebSocket으로 클라이언트에 전송합니다.
+   * 이제 DART 공시 정보만을 기반으로 AI 분석을 수행합니다.
+   * @param query 사용자가 검색한 종목명 또는 관련 키워드
+   * @param socketId 클라이언트의 WebSocket ID
+   * @param selectedCorpCode 사용자가 명시적으로 선택한 기업 고유번호 (선택적)
    */
-  async processStockAnalysis(userQuery: string, clientId: string): Promise<void> {
-    if (!userQuery) {
-      this.logger.error(`Attempted to process stock analysis without query for client ${clientId}`);
-      // 클라이언트에게 에러를 웹소켓으로 알립니다.
-      this.eventsGateway.sendProcessingComplete(clientId, { error: '검색어가 누락되었습니다.', query: userQuery, socketId: clientId });
-      return;
-    }
-
-    this.logger.log(`[StockService] Starting stock analysis for user query: "${userQuery}" for client: ${clientId}`);
+  async getStockAnalysisData(
+    query: string,
+    socketId: string,
+    selectedCorpCode?: string,
+  ): Promise<void> {
+    this.logger.log(`[StockService] getStockAnalysisData 호출: query=${query}, socketId=${socketId}, selectedCorpCode=${selectedCorpCode || '없음'}`);
+    let companyName: string = query;
+    let corpCode: string | undefined = selectedCorpCode;
 
     try {
-      const stockMapping: StockMapping = this.keywordMappingService.getMapping(userQuery);
-      const { primaryName, searchKeywords } = stockMapping;
+      // 1. DART에서 회사 정보 조회 및 corpCode 확정
+      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+        query: query,
+        corpCode: corpCode || 'UNKNOWN',
+        socketId: socketId,
+        message: `'${query}'에 대한 회사 정보를 확인 중입니다.`,
+      });
 
-      this.logger.log(`[StockService] Mapped to primaryName: "${primaryName}", Search Keywords: ${searchKeywords.join(', ')}`);
+      if (!corpCode) {
+        this.logger.debug(`[StockService] corpCode 미제공. DART에서 회사 정보 검색 시작: query=${query}`);
+        const companies = this.disclosureService.searchCompaniesByName(query);
+        if (companies.length > 0) {
+          const mainCompany = companies[0];
+          companyName = mainCompany.corp_name;
+          corpCode = mainCompany.corp_code;
+          this.logger.log(`[StockService] DART에서 회사 정보 매핑 성공: query=${query} -> 회사명=${companyName}, corpCode=${corpCode}`);
+        } else {
+          this.logger.warn(`[StockService] DART에서 '${query}'에 대한 회사 정보를 찾을 수 없습니다. 기본 분석 결과 전송.`);
+          const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, "회사 정보를 찾을 수 없어 AI 분석을 수행할 수 없습니다.");
+          const stockData: StockData = {
+            name: query,
+            code: corpCode,
+            weatherSummary: defaultAnalysisResult.weatherSummary,
+            overallSentiment: defaultAnalysisResult.overallSentiment,
+            sentimentScore: defaultAnalysisResult.sentimentScore,
+            keywords: defaultAnalysisResult.keywords,
+            reportSummary: defaultAnalysisResult.reportSummary,
+            detailedAnalysis: defaultAnalysisResult.detailedAnalysis,
+            investmentOpinion: defaultAnalysisResult.investmentOpinion,
+            relatedStocks: defaultAnalysisResult.relatedStocks,
+            articles: [], // 공시가 없으므로 빈 배열
+          };
+          this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+            stock: stockData,
+            weatherIcon: 'unknown',
+            timestamp: new Date().toISOString(),
+            disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+            error: `"${query}"에 대한 회사 정보를 찾을 수 없어 AI 분석을 수행할 수 없습니다.`,
+            query: query,
+            socketId: socketId, // ⭐ socketId 추가 ⭐
+            newsCount: 0, // 공시 개수 0
+          } as StockWeatherResponseDto);
+          return;
+        }
+      } else {
+        const companyInfo = this.disclosureService.getCorpInfoByCode(corpCode);
+        if (companyInfo) {
+          companyName = companyInfo.corp_name;
+          this.logger.log(`[StockService] 선택된 corpCode로 회사명 확인: corpCode=${corpCode} -> 회사명=${companyName}`);
+        } else {
+          this.logger.warn(`[StockService] 선택된 corpCode '${corpCode}'에 대한 회사 정보를 찾을 수 없습니다. 쿼리 '${query}'를 회사명으로 사용.`);
+          // 이 경우에도 defaultAnalysisResult를 보내는 것이 안전합니다.
+          const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, `선택된 회사 코드 '${corpCode}'에 대한 정보를 찾을 수 없습니다.`);
+          const stockData: StockData = {
+            name: query,
+            code: corpCode,
+            weatherSummary: defaultAnalysisResult.weatherSummary,
+            overallSentiment: defaultAnalysisResult.overallSentiment,
+            sentimentScore: defaultAnalysisResult.sentimentScore,
+            keywords: defaultAnalysisResult.keywords,
+            reportSummary: defaultAnalysisResult.reportSummary,
+            detailedAnalysis: defaultAnalysisResult.detailedAnalysis,
+            investmentOpinion: defaultAnalysisResult.investmentOpinion,
+            relatedStocks: defaultAnalysisResult.relatedStocks,
+            articles: [],
+          };
+          this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+            stock: stockData,
+            weatherIcon: 'unknown',
+            timestamp: new Date().toISOString(),
+            disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+            error: `선택된 회사 코드 '${corpCode}'에 대한 정보를 찾을 수 없습니다.`,
+            query: query,
+            socketId: socketId,
+            newsCount: 0,
+          } as StockWeatherResponseDto);
+          return;
+        }
+      }
 
-      // 1. 뉴스 검색 시작 알림
-      this.eventsGateway.sendAnalysisProgress(
-        clientId,
-        'NEWS_SEARCH_STARTED',
-        `'${primaryName}'에 대한 뉴스를 찾아보고 있어요...`,
-        userQuery
-      );
-      this.logger.log(`[StockService] Notified client: News search started for '${primaryName}'.`);
+      if (!corpCode) {
+        this.logger.error(`[StockService] 최종적으로 corpCode를 확보하지 못했습니다: query=${query}, selectedCorpCode=${selectedCorpCode || '없음'}`);
+        throw new Error('회사 고유번호를 확인할 수 없습니다.');
+      }
 
-      // 🚨 변경점: 뉴스 검색 로직 최적화
-      // primaryName과 searchKeywords를 결합하여 단일 쿼리로 NewsService 호출
-      // Google CSE는 OR 연산자를 지원하므로, 여러 키워드를 'OR'로 연결하여 검색 범위를 확장
-      const combinedQuery = `${primaryName} ${searchKeywords.join(' OR ')}`; // 예: "삼성전자 반도체 OR HBM OR AI"
-      const NEWS_FETCH_LIMIT = 20; // AI 분석에 필요한 뉴스 기사 수 (조절 가능)
+      // 2. DART에서 최신 공시 정보 조회
+      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+        query: query,
+        corpCode: corpCode,
+        socketId: socketId,
+        message: `'${companyName}'(${corpCode})의 최근 공시 정보를 조회 중입니다.`,
+      });
+      this.logger.debug(`[StockService] DART 공시 정보 조회 시작: corpCode=${corpCode}`);
+      const recentDisclosures: DisclosureItem[] = await this.disclosureService.getRecentDisclosures(corpCode, 5); // 최근 5개 공시
 
-      this.logger.log(`[StockService] Combined news search query: "${combinedQuery}", fetching up to ${NEWS_FETCH_LIMIT} articles.`);
-
-      // NewsService의 searchAllNews 메서드가 이미 중복 제거, 최신순 정렬, limit 적용까지 해줌
-      const articlesForAI: NewsArticle[] = await this.newsService.searchAllNews(combinedQuery, NEWS_FETCH_LIMIT);
-
-      if (articlesForAI.length === 0) {
-        this.logger.warn(`[StockService] No news articles found for '${combinedQuery}'. Sending 'no news' response to client.`);
-        // 뉴스 기사가 없으므로 AI 분석 없이 바로 결과 반환 (또는 에러 처리)
-        this.eventsGateway.sendProcessingComplete(clientId, {
-          stock: {
-            name: primaryName,
-            weatherSummary: '관련 뉴스 기사를 찾을 수 없습니다.',
-            overallSentiment: 'UNKNOWN',
-            sentimentScore: 0,
-            keywords: [],
-            reportSummary: '분석에 필요한 뉴스 데이터가 부족합니다.',
-            articles: [], // 기사 없음
-            detailedAnalysis: { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '뉴스 기사가 없어 분석을 수행할 수 없습니다. 검색어를 다시 확인하거나, 나중에 다시 시도해주세요.' },
-            investmentOpinion: { opinion: '관망', confidence: 0 },
-            relatedStocks: [],
-            overallNewsSummary: `[${primaryName}] 관련 뉴스 기사 없음.`,
-          },
+      if (!recentDisclosures || recentDisclosures.length === 0) {
+        this.logger.warn(`[StockService] '${companyName}'(${corpCode})에 대한 최근 공시 정보가 없습니다. 기본 분석 결과 전송.`);
+        const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, "최근 공시 정보가 없어 AI 분석을 수행할 수 없습니다.");
+        const stockData: StockData = {
+          name: companyName,
+          code: corpCode,
+          weatherSummary: defaultAnalysisResult.weatherSummary,
+          overallSentiment: defaultAnalysisResult.overallSentiment,
+          sentimentScore: defaultAnalysisResult.sentimentScore,
+          keywords: defaultAnalysisResult.keywords,
+          reportSummary: defaultAnalysisResult.reportSummary,
+          detailedAnalysis: defaultAnalysisResult.detailedAnalysis,
+          investmentOpinion: defaultAnalysisResult.investmentOpinion,
+          relatedStocks: defaultAnalysisResult.relatedStocks,
+          articles: [], // 공시가 없으므로 빈 배열
+        };
+        this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+          stock: stockData,
           weatherIcon: 'unknown',
           timestamp: new Date().toISOString(),
-          disclaimer: '뉴스 부족으로 인한 분석 불가.',
-          query: userQuery,
-          newsCount: 0,
-          socketId: clientId,
-        });
+          disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+          error: `"${companyName}"에 대한 최근 공시 정보가 없어 AI 분석을 수행할 수 없습니다.`,
+          query: query,
+          socketId: socketId, // ⭐ socketId 추가 ⭐
+          newsCount: 0, // 공시 개수 0
+        } as StockWeatherResponseDto);
         return;
       }
 
-      this.logger.log(`[StockService] Articles collected for AI analysis: ${articlesForAI.length} articles.`);
-
-      // 2. AI 분석 시작 알림
-      this.eventsGateway.sendAnalysisProgress(
-        clientId,
-        'AI_ANALYSIS_STARTED',
-        `AI가 '${primaryName}'의 주식 전망에 대해 분석하고 있어요...`,
-        userQuery
-      );
-      this.logger.log(`[StockService] Notified client: AI analysis started for '${primaryName}'.`);
-
-      // AI 분석 요청
-      const analysisResult: AIAnalysisResult = await this.aiAnalysisService.analyzeStock(primaryName, articlesForAI);
-      this.logger.log(`[StockService] AI analysis completed for "${primaryName}".`);
-
-      // AI 분석 결과의 overallSentiment를 기반으로 날씨 아이콘 결정
-      let weatherIcon: StockWeatherResponseDto['weatherIcon'] = 'unknown';
-      if (analysisResult.overallSentiment === 'VERY_POSITIVE') {
-        weatherIcon = 'sunny';
-      } else if (analysisResult.overallSentiment === 'POSITIVE') {
-        weatherIcon = 'partly-cloudy';
-      } else if (analysisResult.overallSentiment === 'NEUTRAL') {
-        weatherIcon = 'cloudy';
-      } else if (analysisResult.overallSentiment === 'NEGATIVE') {
-        weatherIcon = 'rainy';
-      } else if (analysisResult.overallSentiment === 'VERY_NEGATIVE') {
-        weatherIcon = 'stormy';
+      // 3. AI 분석 서비스 호출
+      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+        query: query,
+        corpCode: corpCode,
+        socketId: socketId,
+        message: `AI가 '${companyName}'의 공시 데이터를 분석 중입니다. (${recentDisclosures.length}개 공시)`,
+      });
+      this.logger.log(`[StockService] AI 분석 서비스 호출: 회사명=${companyName}, 공시 ${recentDisclosures.length}개`);
+      let aiAnalysisResult: AIAnalysisResult;
+      try {
+        aiAnalysisResult = await this.aiAnalysisService.analyzeStockData(
+          companyName,
+          recentDisclosures,
+          socketId, // ⭐ AIAnalysisService로 socketId 전달 ⭐
+          corpCode, // ⭐ AIAnalysisService로 corpCode 전달 ⭐
+          query // ⭐ AIAnalysisService로 query 전달 ⭐
+        );
+        this.logger.log(`[StockService] AI 분석 성공: 회사명=${companyName}, 요약=${aiAnalysisResult.weatherSummary}`);
+      } catch (aiError) {
+        this.logger.error(`[StockService] AI 분석 중 오류 발생 (${companyName}): ${aiError.message}`);
+        aiAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, `AI 분석 중 오류 발생: ${aiError.message}`);
       }
 
-      // 최종 StockWeatherResponseDto 구성 시, articles 필드는 NewsArticleSummary[]로 변환하여 할당합니다.
-      // 여기서는 AI에 전달된 articlesForAI 중에서 TOP 5만 UI에 표시하도록 했습니다.
-      const summarizedArticlesForDto: NewsArticleSummary[] = articlesForAI.slice(0, 5).map(article => ({
-        title: article.title,
-        summary: article.description,
-        url: article.link,
-        thumbnailUrl: article.thumbnail,
-        sentiment: article.sentiment || 'UNKNOWN',
-      }));
-
-      const finalResponse: StockWeatherResponseDto = {
-        stock: {
-          name: primaryName,
-          weatherSummary: analysisResult.weatherSummary || "AI 분석 결과입니다.",
-          overallSentiment: analysisResult.overallSentiment || "NEUTRAL",
-          sentimentScore: analysisResult.sentimentScore || 0,
-          keywords: analysisResult.keywords || [],
-          reportSummary: analysisResult.reportSummary || "AI 분석 결과 요약.",
-          articles: summarizedArticlesForDto, // UI에 표시할 뉴스 요약 (최대 5개)
-          detailedAnalysis: analysisResult.detailedAnalysis || { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '' }, // 상세 분석 객체 초기화
-          investmentOpinion: analysisResult.investmentOpinion || { opinion: "관망", confidence: 0 },
-          relatedStocks: analysisResult.relatedStocks || [],
-          overallNewsSummary: analysisResult.overallNewsSummary || `[${primaryName}] 관련 뉴스 요약 없음.`,
-        },
-        weatherIcon: weatherIcon,
-        timestamp: new Date().toISOString(),
-        disclaimer: "본 분석은 AI 기반 예측치이며, 실제 투자 결과와 무관합니다. 투자 결정은 반드시 본인의 판단과 책임 하에 이루어져야 합니다.",
-        query: userQuery,
-        newsCount: articlesForAI.length, // AI 분석에 사용된 고유 뉴스 기사 수
-        socketId: clientId, // 최종 응답에도 socketId 포함
+      // 4. 최종 DTO 구성 및 클라이언트에 전송
+      const stockData: StockData = {
+        name: companyName,
+        code: corpCode,
+        weatherSummary: aiAnalysisResult.weatherSummary,
+        overallSentiment: aiAnalysisResult.overallSentiment,
+        sentimentScore: aiAnalysisResult.sentimentScore,
+        keywords: aiAnalysisResult.keywords,
+        reportSummary: aiAnalysisResult.reportSummary,
+        detailedAnalysis: aiAnalysisResult.detailedAnalysis,
+        investmentOpinion: aiAnalysisResult.investmentOpinion,
+        relatedStocks: aiAnalysisResult.relatedStocks,
+        articles: recentDisclosures, // 조회된 공시 정보를 articles 필드에 포함
+        overallNewsSummary: aiAnalysisResult.overallNewsSummary, // AIAnalysisResult에 있다면 사용
       };
 
-      // 🚨 디버깅을 위한 로그 추가: 최종 전송될 기사 수와 첫 번째 기사 제목 확인
-      this.logger.log(`[StockService] Sending final response for '${userQuery}' to client ${clientId}. Articles count: ${finalResponse.stock.articles.length}`);
-      if (finalResponse.stock.articles.length > 0) {
-        this.logger.debug(`[StockService] First article title (in finalResponse): "${finalResponse.stock.articles[0].title}"`);
-      }
+      const weatherIcon = this.getWeatherIconBasedOnSentiment(aiAnalysisResult.overallSentiment);
 
-      // 분석이 완료되면 Socket.IO를 통해 프론트엔드로 결과를 전송합니다.
-      this.eventsGateway.sendProcessingComplete(clientId, finalResponse);
-      this.logger.log(`[StockService] Analysis complete for '${userQuery}'. Result sent to client ${clientId}.`);
+      const finalResponse: StockWeatherResponseDto = {
+        stock: stockData,
+        weatherIcon: weatherIcon,
+        timestamp: new Date().toISOString(),
+        disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+        query: query,
+        socketId: socketId, // ⭐ socketId 필수 포함 ⭐
+        newsCount: recentDisclosures.length, // 조회된 공시 개수 포함
+      };
+
+      this.eventsGateway.sendToClient(socketId, 'processingComplete', finalResponse); // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+      this.logger.log(`[StockService] '${companyName}' 분석 결과 클라이언트에 성공적으로 전송 (socketId: ${socketId})`);
 
     } catch (error) {
-      this.logger.error(`[StockService] Error during stock analysis for '${userQuery}' (client: ${clientId}):`, error.message, error.stack);
-      // 분석 중 에러가 발생했을 때 클라이언트에게 에러를 웹소켓으로 알립니다.
-      const errorResponse: StockWeatherResponseDto = {
+      this.logger.error(`[StockService] 주식 분석 중 치명적인 오류 발생: ${error.message}`, error.stack);
+      this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
         stock: {
-          name: userQuery,
-          weatherSummary: '분석 중 오류가 발생했습니다.',
+          name: companyName,
+          code: corpCode,
+          weatherSummary: '오류 발생으로 분석을 완료할 수 없습니다.',
           overallSentiment: 'UNKNOWN',
           sentimentScore: 0,
           keywords: [],
-          reportSummary: '데이터를 가져오거나 분석하는 중 문제가 발생했습니다.',
-          articles: [], // 에러 발생 시 기사 없음
-          detailedAnalysis: { positiveFactors: '', negativeFactors: '', neutralFactors: '', overallOpinion: '서비스에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' },
+          reportSummary: '오류 발생으로 분석을 완료할 수 없습니다.',
+          detailedAnalysis: {
+            positiveFactors: '',
+            negativeFactors: '',
+            neutralFactors: '',
+            overallOpinion: '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          },
           investmentOpinion: { opinion: '관망', confidence: 0 },
           relatedStocks: [],
-          overallNewsSummary: `[${userQuery}] 뉴스 요약 실패.`,
+          articles: [],
+          overallNewsSummary: '분석 중 오류가 발생했습니다.',
         },
         weatherIcon: 'unknown',
         timestamp: new Date().toISOString(),
-        disclaimer: '이 분석 결과는 AI에 의해 생성된 것으로, 투자 결정에 대한 최종 책임은 사용자에게 있습니다.',
-        error: `분석 실패: ${error.message || '알 수 없는 오류'}`,
-        query: userQuery,
-        newsCount: 0,
-        socketId: clientId,
-      };
-      this.eventsGateway.sendProcessingComplete(clientId, errorResponse);
+        disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+        error: error.message || '알 수 없는 서버 오류가 발생했습니다.',
+        query: query,
+        socketId: socketId, // ⭐ socketId 필수 포함 ⭐
+        newsCount: 0, // 오류 발생 시 공시 개수 0
+      } as StockWeatherResponseDto);
+    }
+  }
+
+  /**
+   * AI 분석 감성에 따라 날씨 아이콘을 반환합니다.
+   * @param sentiment AI 분석의 전반적 감성
+   * @returns 날씨 아이콘 문자열
+   */
+  private getWeatherIconBasedOnSentiment(sentiment: StockData['overallSentiment']): StockWeatherResponseDto['weatherIcon'] {
+    switch (sentiment) {
+      case 'VERY_POSITIVE':
+      case 'POSITIVE':
+        return 'sunny';
+      case 'NEUTRAL':
+        return 'partly-cloudy';
+      case 'NEGATIVE':
+        return 'cloudy';
+      case 'VERY_NEGATIVE':
+        return 'stormy';
+      default:
+        return 'unknown';
     }
   }
 }
