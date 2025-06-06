@@ -6,6 +6,12 @@ import { IoAdapter } from '@nestjs/platform-socket.io'; // Socket.IO 어댑터 �
 import * as cookieParser from 'cookie-parser'; // ⭐ cookieParser 임포트 추가
 
 async function bootstrap() {
+  // ⭐ Cloud SQL Proxy가 시작될 시간을 주기 위한 지연 (테스트용)
+  // 이 부분은 NestFactory.create(AppModule) 호출 전에 위치해야 합니다.
+  console.log('Waiting 5 seconds for Cloud SQL Proxy to start...');
+  await new Promise(resolve => setTimeout(resolve, 5000)); // 5초 대기
+  console.log('Done waiting. Attempting to connect to DB.');
+
   const app = await NestFactory.create(AppModule);
 
   // 전역 프리픽스 설정 (선택 사항, 필요하다면)
