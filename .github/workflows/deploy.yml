@@ -7,13 +7,11 @@ on:
 
 env:
   PROJECT_ID: stockweather # 본인의 Google Cloud 프로젝트 ID로 변경
-  SERVICE_NAME: stockweather-backend
-  REGION: asia-northeast3
-  # 수정: ARTIFACT_REGISTRY_PATH 정의 방식을 변경합니다.
-  # env.PROJECT_ID를 직접 문자열로 넣거나, 아니면 이 변수 자체를 최하단에서 참조하도록 변경합니다.
-  # 여기서는 PROJECT_ID를 직접 사용하여 오류를 피합니다.
-  # 만약 PROJECT_ID가 'stockweather'라면, 아래는 'asia-northeast3-docker.pkg.dev/stockweather/stockweather-backend'가 됩니다.
-  ARTIFACT_REGISTRY_PATH: asia-northeast3-docker.pkg.dev/stockweather/${{ env.SERVICE_NAME }} # <--- 이 부분을 수정합니다.
+  SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름 (이미지 이름으로도 사용)
+  REGION: asia-northeast3 # Cloud Run 배포 리전
+  # 수정: ARTIFACT_REGISTRY_FULL_IMAGE_PATH를 직접 정의하여 env 참조 문제를 우회합니다.
+  # PROJECT_ID와 SERVICE_NAME (이미지 이름)을 여기에 직접 포함시킵니다.
+  ARTIFACT_REGISTRY_FULL_IMAGE_PATH: asia-northeast3-docker.pkg.dev/stockweather/stockweather-backend/stockweather-backend # <--- 이 부분을 수정합니다.
   GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com
   GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-db
   DB_HOST: 127.0.0.1
@@ -57,18 +55,19 @@ jobs:
 
       - name: 'Build Docker image'
         run: |
-          docker build -t ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          # ARTIFACT_REGISTRY_FULL_IMAGE_PATH 변수에 이미 이미지 이름까지 포함되어 있습니다.
+          docker build -t ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
         run: |
-          docker push ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }}
 
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          image: ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }} # 변경된 변수 이름 사용
           flags: |
             --allow-unauthenticated
             --set-env-vars DB_HOST=${{ env.DB_HOST }}
