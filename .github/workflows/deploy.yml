@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'src/**'
-      - 'Dockerfile'
 
 env:
   PROJECT_ID: stockweather # 본인의 Google Cloud 프로젝트 ID로 변경
