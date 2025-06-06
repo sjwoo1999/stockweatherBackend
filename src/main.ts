@@ -5,102 +5,50 @@ import { AppModule } from './app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as cookieParser from 'cookie-parser';
 import { Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm'; // TypeORM의 DataSource를 임포트합니다.
-import { ConfigService } from '@nestjs/config'; // ConfigService를 임포트합니다.
+// DataSource와 ConfigService는 이제 AppModule에서 TypeOrmModule.forRootAsync를 통해 처리하므로
+// main.ts에서 직접 임포트하거나 사용할 필요가 없습니다.
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  let dbRetries = 50; // DB 연결 재시도 횟수
-  const dbDelay = 5000; // DB 연결 재시도 간격 (5초)
+  const logger = new Logger('Bootstrap'); // 애플리케이션 로깅을 위한 로거 인스턴스 생성
+  const port = process.env.PORT || 8080; // 환경 변수 PORT가 없으면 기본값 8080 사용
 
-  // 1단계: NestJS 애플리케이션 생성 및 8080 포트 리스닝 시작
-  // 이 단계에서는 DB 연결을 시도하지 않으므로, 매우 빠르게 완료되어 Cloud Run 시작 프로브를 통과합니다.
-  logger.log('Starting Nest application to listen on port first...');
+  // NestJS 애플리케이션 인스턴스를 생성합니다.
+  // 이 시점에 AppModule의 초기화 과정이 시작되고, 그 과정에서 TypeOrmModule이 데이터베이스 연결을 시도합니다.
+  logger.log('Starting Nest application and initializing database connection...');
   const app = await NestFactory.create(AppModule);
 
-  // 전역 프리픽스 설정
+  // 전역 프리픽스 설정: 모든 API 엔드포인트 앞에 'api'를 붙입니다.
   app.setGlobalPrefix('api');
 
-  // CORS 설정
+  // CORS (Cross-Origin Resource Sharing) 설정
+  // 프론트엔드 애플리케이션의 도메인(origin)을 허용하여 교차 출처 요청을 가능하게 합니다.
   app.enableCors({
     origin: [
-      'http://localhost:3001',
-      'https://stockweather-frontend.vercel.app',
+      'http://localhost:3001', // 로컬 개발 환경 프론트엔드
+      'https://stockweather-frontend.vercel.app', // Vercel 배포된 프론트엔드
+      // 추가적인 프론트엔드 도메인이 있다면 여기에 추가합니다.
     ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // 허용할 HTTP 메서드
+    credentials: true, // 자격 증명 (쿠키, HTTP 인증)을 포함한 요청 허용
   });
 
-  // cookie-parser 미들웨어 추가
+  // cookie-parser 미들웨어 추가: HTTP 요청에서 쿠키를 파싱합니다.
   app.use(cookieParser());
 
-  // WebSocket Adapter 등록
+  // WebSocket Adapter 등록: Socket.IO를 사용하여 WebSocket 기능을 활성화합니다.
+  // 실시간 통신이 필요한 경우에 사용됩니다.
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = process.env.PORT || 8080;
-  await app.listen(port); // ⭐⭐⭐ 애플리케이션이 먼저 포트 리스닝을 시작합니다. ⭐⭐⭐
+  // NestJS 애플리케이션이 지정된 포트에서 들어오는 요청을 수신 대기하도록 합니다.
+  // 이 호출은 TypeOrmModule의 데이터베이스 연결이 성공한 후에만 실행됩니다.
+  // 만약 TypeOrmModule에서 데이터베이스 연결에 실패하여 process.exit(1)이 호출되면,
+  // 이 listen() 메서드는 실행되지 않고 애플리케이션은 시작에 실패합니다.
+  await app.listen(port);
+
+  // 애플리케이션이 성공적으로 시작되고 포트에서 리스닝 중임을 로깅합니다.
   logger.log(`Application is running on: ${await app.getUrl()}`);
-  logger.log('Application is listening on port, now attempting to connect to DB asynchronously.');
-
-  // 2단계: 애플리케이션이 리스닝을 시작한 후, 데이터베이스 연결을 재시도합니다.
-  // 이 루프는 백그라운드에서 실행되므로, DB 연결에 시간이 오래 걸려도 Cloud Run의 시작 프로브는 통과됩니다.
-  while (dbRetries > 0) {
-    try {
-      const configService = app.get(ConfigService); // 앱 컨텍스트에서 ConfigService 가져오기
-
-      console.log('--- DB Config Loaded (for deferred connection) ---');
-      console.log('DB_HOST:', configService.get<string>('DB_HOST'));
-      console.log('DB_PORT:', configService.get<number>('DB_PORT'));
-      console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
-      console.log('DB_DATABASE:', configService.get<string>('DB_DATABASE'));
-      console.log('DB_PASSWORD loaded:', !!configService.get<string>('DB_PASSWORD'));
-      console.log('DB_PASSWORD length:', configService.get<string>('DB_PASSWORD')?.length);
-      console.log('DB_SSL_ENABLED:', configService.get<boolean>('DB_SSL_ENABLED'));
-      console.log('-------------------------------------------');
-
-      const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
-      const sslEnabled = dbSslEnabledConfig === 'true';
-
-      // TypeORM DataSource를 수동으로 생성하고 연결합니다.
-      const dataSource = new DataSource({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
-        logging: configService.get<boolean>('DB_LOGGING', false),
-        ssl: sslEnabled,
-      });
-
-      await dataSource.initialize(); // DB 연결 시도
-      logger.log('Database connected successfully!');
-
-      // ⭐ 중요: TypeOrmModule.forRootAsync를 제거했기 때문에,
-      // @InjectRepository()를 사용하는 서비스들은 이 시점까지는 DB 연결을 사용할 수 없습니다.
-      // NestJS 앱이 이미 시작되었지만, DB 관련 기능은 DB 연결이 완료된 후에만 정상 작동합니다.
-      // 일반적으로는 TypeORM 연결 인스턴스를 동적으로 주입하거나,
-      // DB 관련 서비스가 DB 연결 여부를 확인하고 대기하는 로직을 추가해야 합니다.
-      // 이 부분은 당장은 아니더라도, 나중에 기능 테스트 시 오류가 발생하면 수정이 필요할 수 있습니다.
-
-      break; // DB 연결 성공, 재시도 루프 탈출
-    } catch (error) {
-      if (error.code === 'ECONNREFUSED' || (error.message && error.message.includes('Unable to connect to the database'))) {
-        logger.warn(`Failed to connect to DB (deferred). Retrying in ${dbDelay / 1000} seconds... Retries left: ${dbRetries - 1}`);
-        dbRetries--;
-        await new Promise(resolve => setTimeout(resolve, dbDelay));
-      } else {
-        logger.error('An unexpected error occurred during deferred DB connection. Exiting container.', error.message);
-        process.exit(1); // 예상치 못한 DB 오류는 컨테이너 종료
-      }
-    }
-  }
-
-  if (dbRetries === 0) {
-    logger.error('Failed to connect to the database after multiple retries (deferred). This instance will likely not function correctly. Exiting.');
-    process.exit(1); // 모든 재시도 소진 시 컨테이너 종료 (이 경우 Cloud Run이 새 인스턴스 시작 시도)
-  }
+  logger.log('Application is fully initialized and listening for requests.');
 }
+
+// bootstrap 함수를 호출하여 애플리케이션을 시작합니다.
 bootstrap();

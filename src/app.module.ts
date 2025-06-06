@@ -1,70 +1,121 @@
 // stockweather-backend/src/app.module.ts
 
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-// import { TypeOrmModule } from '@nestjs/typeorm'; // ⭐⭐ 이 줄을 주석 처리하거나 제거합니다. ⭐⭐
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-// 기존 모듈 임포트
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
+// 필요한 엔티티들을 임포트합니다.
+// 예시: User 엔티티가 있다면 아래와 같이 임포트합니다.
+import { User } from './users/user.entity';
+// 다른 엔티티들이 있다면 여기에 추가해주세요. 예: import { Stock } from './stock/stock.entity';
 
-// 새로 추가 또는 확인 모듈 임포트
-import { StockModule } from './stock/stock.module';
-import { AIAnalysisModule } from './ai-analysis/ai-analysis.module';
-import { EventsModule } from './events/events.module';
+// 애플리케이션의 다른 모듈들을 임포트합니다.
+// 예시: UserModule이 있다면 아래와 같이 임포트합니다.
+import { UserModule } from './users/user.module';
+// 다른 모듈들이 있다면 여기에 추가해주세요. 예: import { AuthModule } from './auth/auth.module';
+// import { StockModule } from './stock/stock.module';
+// import { EventsModule } from './events/events.module';
+
 
 @Module({
   imports: [
+    // 환경 변수 설정을 위한 ConfigModule을 전역으로 설정합니다.
     ConfigModule.forRoot({
-      isGlobal: true,
+      isGlobal: true, // ConfigService를 앱 전체에서 주입하여 사용 가능하게 합니다.
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development', // 환경별 .env 파일 지정 (옵션)
+      ignoreEnvFile: process.env.NODE_ENV === 'production', // 프로덕션에서는 환경 파일 무시 (배포 환경 변수 사용)
     }),
 
-    // ⭐⭐⭐ 이 TypeOrmModule.forRootAsync 부분을 완전히 제거합니다. ⭐⭐⭐
-    // TypeOrmModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: (configService: ConfigService) => {
-    //     console.log('--- DB Config Loaded (from app.module.ts) ---');
-    //     console.log('DB_HOST:', configService.get<string>('DB_HOST'));
-    //     console.log('DB_PORT:', configService.get<number>('DB_PORT'));
-    //     console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
-    //     console.log('DB_DATABASE:', configService.get<string>('DB_DATABASE'));
-    //     console.log('DB_PASSWORD loaded:', !!configService.get<string>('DB_PASSWORD'));
-    //     console.log('DB_PASSWORD length:', configService.get<string>('DB_PASSWORD')?.length);
-    //     console.log('DB_SSL_ENABLED:', configService.get<boolean>('DB_SSL_ENABLED'));
-    //     console.log('-------------------------------------------');
+    // TypeORM 데이터베이스 연결을 위한 TypeOrmModule 설정
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule], // ConfigService를 사용하기 위해 ConfigModule을 임포트합니다.
+      useFactory: async (configService: ConfigService) => {
+        // 환경 변수에서 DB_SSL_ENABLED 값을 가져와 boolean으로 변환합니다.
+        const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
+        const sslEnabled = dbSslEnabledConfig === 'true';
 
-    //     const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
-    //     const sslEnabled = dbSslEnabledConfig === 'true';
+        // 데이터베이스 연결 설정을 콘솔에 출력하여 디버깅을 돕습니다.
+        console.log('--- TypeOrmModule.forRootAsync DB Config ---');
+        console.log('DB_HOST:', configService.get<string>('DB_HOST'));
+        console.log('DB_PORT:', configService.get<number>('DB_PORT'));
+        console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
+        console.log('DB_DATABASE:', configService.get<string>('DB_DATABASE'));
+        console.log('DB_PASSWORD loaded:', !!configService.get<string>('DB_PASSWORD')); // 비밀번호 존재 여부만 표시
+        console.log('DB_PASSWORD length:', configService.get<string>('DB_PASSWORD')?.length);
+        console.log('DB_SSL_ENABLED:', sslEnabled);
+        console.log('DB_SYNCHRONIZE:', configService.get<boolean>('DB_SYNCHRONIZE', false));
+        console.log('DB_LOGGING:', configService.get<boolean>('DB_LOGGING', false));
+        console.log('CLOUD_SQL_CONNECTION_NAME:', configService.get<string>('CLOUD_SQL_CONNECTION_NAME'));
+        console.log('-------------------------------------------');
 
-    //     return {
-    //       type: 'postgres',
-    //       host: configService.get<string>('DB_HOST'),
-    //       port: configService.get<number>('DB_PORT'),
-    //       username: configService.get<string>('DB_USERNAME'),
-    //       password: configService.get<string>('DB_PASSWORD'),
-    //       database: configService.get<string>('DB_DATABASE'),
-    //       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-    //       synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
-    //       logging: configService.get<boolean>('DB_LOGGING', false),
-    //       ssl: sslEnabled,
-    //     };
-    //   },
-    // }),
+        return {
+          type: 'postgres', // 데이터베이스 타입 (PostgreSQL)
+          host: configService.get<string>('DB_HOST'),
+          port: configService.get<number>('DB_PORT'),
+          username: configService.get<string>('DB_USERNAME'),
+          password: configService.get<string>('DB_PASSWORD'),
+          database: configService.get<string>('DB_DATABASE'),
+          // 엔티티 파일 경로를 지정합니다. 모든 *.entity.ts 또는 *.entity.js 파일을 스캔합니다.
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          // 개발 환경에서만 synchronize를 true로 설정하는 것이 좋습니다.
+          // synchronize: true는 데이터베이스 스키마를 자동으로 동기화하지만, 프로덕션에서는 위험할 수 있습니다.
+          synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+          // SQL 쿼리 로깅 설정 (개발 시 유용, 프로덕션에서는 성능 저하 가능성)
+          logging: configService.get<boolean>('DB_LOGGING', false),
+          // SSL 연결 설정
+          ssl: sslEnabled ? {
+            // 프로덕션 환경에서 rejectUnauthorized: false는 보안상 위험할 수 있습니다.
+            // 실제 배포 시에는 CA 인증서를 통해 유효성 검사를 하는 것이 좋습니다.
+            rejectUnauthorized: false,
+          } : false,
+          extra: {
+            // Cloud SQL Proxy를 사용하는 경우, socketPath를 설정합니다.
+            // CLOUD_SQL_CONNECTION_NAME 환경 변수가 설정되어 있으면 Unix 소켓 경로를 사용합니다.
+            socketPath: configService.get<string>('CLOUD_SQL_CONNECTION_NAME') ?
+                        `/cloudsql/${configService.get<string>('CLOUD_SQL_CONNECTION_NAME')}` : undefined,
+          },
+        };
+      },
+      inject: [ConfigService], // useFactory 함수에 ConfigService를 주입받도록 명시합니다.
+      // DataSource 인스턴스를 생성하고 초기화하는 팩토리 함수입니다.
+      // 여기에 데이터베이스 연결 재시도 로직을 포함하여 애플리케이션 시작의 견고성을 높입니다.
+      dataSourceFactory: async (options) => {
+        const { DataSource } = await import('typeorm'); // 동적 임포트로 순환 의존성 문제 방지
+        const dataSource = new DataSource(options);
 
-    // 애플리케이션의 핵심 기능 모듈들 (이 모듈들은 이제 DB 연결이 나중에 될 것이므로, DB 의존성이 있는 경우 수정이 필요할 수 있습니다. 이는 다음 단계에서 확인합니다.)
-    AuthModule,
-    UsersModule,
-    StockModule,
-    AIAnalysisModule,
-    EventsModule,
+        const maxRetries = 50; // 최대 재시도 횟수
+        let retries = maxRetries;
+        const delay = 5000; // 재시도 간격 (5초)
+
+        console.log('Attempting to connect to the database via TypeOrmModule.dataSourceFactory...');
+
+        while (retries > 0) {
+          try {
+            await dataSource.initialize();
+            console.log('Database connected successfully within TypeOrmModule.dataSourceFactory!');
+            return dataSource; // 연결 성공 시 DataSource 인스턴스 반환
+          } catch (error) {
+            retries--;
+            console.warn(`Failed to connect to DB (TypeOrmModule.dataSourceFactory). Retrying in ${delay / 1000} seconds... Retries left: ${retries}. Error: ${error.message}`);
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, delay)); // 지정된 시간만큼 대기
+            }
+          }
+        }
+        // 모든 재시도 소진 후에도 연결 실패 시
+        console.error('Failed to connect to the database after multiple retries within TypeOrmModule.dataSourceFactory. Exiting application.');
+        // 애플리케이션을 종료하여 Cloud Run 등이 새 인스턴스를 시작하게 합니다.
+        process.exit(1);
+      },
+    }),
+
+    // 여기에 다른 모듈들을 추가합니다.
+    UserModule,
+    // AuthModule,
+    // StockModule,
+    // EventsModule,
   ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-  ],
-  exports: [],
+  controllers: [], // 컨트롤러는 각 기능 모듈에 정의합니다.
+  providers: [],   // 프로바이더는 각 기능 모듈 또는 전역 서비스로 정의합니다.
 })
 export class AppModule {}
