@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml (또는 적절한 이름)
+# .github/workflows/deploy.yml
 name: Deploy Backend to Cloud Run
 
 on:
@@ -9,21 +9,18 @@ on:
       - 'backend/**' # backend 폴더 안의 파일 변경 시 트리거
 
 env:
-  GCP_PROJECT_ID: stockweather # 본인의 GCP 프로젝트 ID로 변경
-  GCP_REGION: asia-northeast3 # Cloud Run을 배포할 리전
-  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy # Artifact Registry Repository 이름
-  # ⭐ Cloud Run 서비스 이름이 'stockweather-backend'가 맞다면 그대로 사용
-  SERVICE_NAME: stockweather-backend 
-  # ⭐ 중요: Cloud SQL 인스턴스의 정확한 연결 이름 ⭐
-  # GCP 콘솔 > Cloud SQL > 인스턴스 클릭 > '개요' 탭에서 '인스턴스 연결 이름' 확인
-  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-cloud-sql # ⭐⭐ 이 값을 실제 Cloud SQL 인스턴스 연결 이름으로 변경해야 합니다! ⭐⭐
+  GCP_PROJECT_ID: stockweather 
+  GCP_REGION: asia-northeast3 
+  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy 
+  SERVICE_NAME: stockweather-backend # ⭐ Cloud Run 서비스 이름이 'stockweather-backend'가 맞는지 Cloud Run 콘솔에서 최종 확인하세요!
+  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-cloud-sql # ⭐⭐ 이 값을 실제 Cloud SQL 인스턴스 연결 이름으로 변경해야 합니다! (중요) ⭐⭐
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write' # OIDC를 사용하여 GCP 인증을 위한 권한
+      id-token: 'write' 
 
     steps:
     - name: Checkout code
@@ -32,14 +29,14 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '20' # 프로젝트에 맞는 Node.js 버전
+        node-version: '20' 
 
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
       uses: 'google-github-actions/auth@v1'
       with:
         workload_identity_provider: 'projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-        # ⭐⭐⭐ 여기를 @ 하나로 수정합니다 ⭐⭐⭐
+        # ⭐⭐⭐ '@@'를 '@' 하나로 수정! (가장 유력한 인증 실패 원인) ⭐⭐⭐
         service_account: 'stockweather-db-connect@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
 
     - name: Docker Login to Artifact Registry
@@ -49,7 +46,7 @@ jobs:
       run: |
         IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
         
-        # ⭐⭐⭐ working-directory를 사용했으므로 빌드 컨텍스트를 '.'으로 변경 ⭐⭐⭐
+        # ⭐⭐⭐ working-directory를 사용했으므로 빌드 컨텍스트를 '.'으로 변경 (이전 수정) ⭐⭐⭐
         docker build -t $IMAGE_NAME . 
         docker push $IMAGE_NAME
 
@@ -77,5 +74,4 @@ jobs:
           --set-env-vars DART_OPENAPI_KEY=${{ secrets.DART_OPENAPI_KEY }} \
           --timeout=600s \
           --port 8080 
-      # ⭐⭐⭐ Dockerfile이 backend 폴더 안에 있으므로 working-directory는 그대로 둠 ⭐⭐⭐
       working-directory: ./backend
