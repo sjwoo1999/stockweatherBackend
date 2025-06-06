@@ -3,7 +3,10 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches:
-      - main
+      - main # main 브랜치에 푸시될 때 워크플로우 실행
+    paths:
+      - 'src/**' # src 폴더 안의 파일이 변경될 때만 실행
+      - 'Dockerfile' # Dockerfile 변경될 때만 실행
 
 env:
   PROJECT_ID: stockweather # 본인의 Google Cloud 프로젝트 ID로 변경
@@ -11,9 +14,12 @@ env:
   REGION: asia-northeast3 # Cloud Run 배포 리전
   # 수정: ARTIFACT_REGISTRY_FULL_IMAGE_PATH를 직접 정의하여 env 참조 문제를 우회합니다.
   # PROJECT_ID와 SERVICE_NAME (이미지 이름)을 여기에 직접 포함시킵니다.
-  ARTIFACT_REGISTRY_FULL_IMAGE_PATH: asia-northeast3-docker.pkg.dev/stockweather/stockweather-backend/stockweather-backend # <--- 이 부분을 수정합니다.
+  ARTIFACT_REGISTRY_FULL_IMAGE_PATH: asia-northeast3-docker.pkg.dev/stockweather/stockweather-backend/stockweather-backend
   GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com
-  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-db
+  # === 여기를 수정합니다! ===
+  # Cloud SQL 인스턴스 ID가 'stockweather'이므로, 연결 이름도 'stockweather'로 설정합니다.
+  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather # <--- 이 부분이 수정되었습니다.
+  # =======================
   DB_HOST: 127.0.0.1
   DB_PORT: 5432
   DB_USERNAME: ${{ secrets.DB_USERNAME }}
@@ -40,11 +46,13 @@ jobs:
       - name: Checkout repository
         uses: 'actions/checkout@v4'
 
+      # Google Cloud 인증 (서비스 계정 키 사용)
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+      # Artifact Registry에 Docker 로그인
       - name: 'Set up Cloud SDK and Docker auth'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
@@ -53,21 +61,23 @@ jobs:
       - name: 'Configure Docker to use the gcloud command'
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
+      # Docker 이미지 빌드
       - name: 'Build Docker image'
         run: |
-          # ARTIFACT_REGISTRY_FULL_IMAGE_PATH 변수에 이미 이미지 이름까지 포함되어 있습니다.
           docker build -t ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }} .
 
+      # Docker 이미지 Artifact Registry에 푸시
       - name: 'Push Docker image to Artifact Registry'
         run: |
           docker push ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }}
 
+      # Cloud Run에 배포
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }} # 변경된 변수 이름 사용
+          image: ${{ env.ARTIFACT_REGISTRY_FULL_IMAGE_PATH }}:${{ github.sha }}
           flags: |
             --allow-unauthenticated
             --set-env-vars DB_HOST=${{ env.DB_HOST }}
@@ -86,5 +96,5 @@ jobs:
             --set-env-vars KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}
             --set-env-vars FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             --add-cloudsql-instances ${{ env.GCP_SQL_INSTANCE_CONNECTION_NAME }}
-            --timeout 300
+            --timeout 300 # 타임아웃 300초 (5분) 설정
             --service-account ${{ env.GCP_SERVICE_ACCOUNT }}
