@@ -1,0 +1,81 @@
+# .github/workflows/deploy.yml (또는 적절한 이름)
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # main 브랜치에 푸시될 때마다 워크플로우 실행
+    paths:
+      - 'backend/**' # backend 폴더 안의 파일 변경 시 트리거
+
+env:
+  GCP_PROJECT_ID: stockweather # 본인의 GCP 프로젝트 ID로 변경
+  GCP_REGION: asia-northeast3 # Cloud Run을 배포할 리전
+  ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy # Artifact Registry Repository 이름
+  # ⭐ Cloud Run 서비스 이름이 'stockweather-backend'가 맞다면 그대로 사용
+  SERVICE_NAME: stockweather-backend 
+  # ⭐ 중요: Cloud SQL 인스턴스의 정확한 연결 이름 ⭐
+  # GCP 콘솔 > Cloud SQL > 인스턴스 클릭 > '개요' 탭에서 '인스턴스 연결 이름' 확인
+  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-cloud-sql # ⭐⭐ 이 값을 실제 Cloud SQL 인스턴스 연결 이름으로 변경해야 합니다! ⭐⭐
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # OIDC를 사용하여 GCP 인증을 위한 권한
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20' # 프로젝트에 맞는 Node.js 버전
+
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: 'projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+        # ⭐⭐⭐ 여기를 @ 하나로 수정합니다 ⭐⭐⭐
+        service_account: 'stockweather-db-connect@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
+
+    - name: Docker Login to Artifact Registry
+      run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+    - name: Build and Deploy to Cloud Run
+      run: |
+        IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
+        
+        # ⭐⭐⭐ working-directory를 사용했으므로 빌드 컨텍스트를 '.'으로 변경 ⭐⭐⭐
+        docker build -t $IMAGE_NAME . 
+        docker push $IMAGE_NAME
+
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image $IMAGE_NAME \
+          --platform managed \
+          --region ${{ env.GCP_REGION }} \
+          --allow-unauthenticated \
+          --add-cloudsql-instances ${{ env.GCP_SQL_INSTANCE_CONNECTION_NAME }} \
+          # ⭐⭐⭐ 환경 변수 구문 수정 (각 변수별 --set-env-vars) ⭐⭐⭐
+          --set-env-vars DB_HOST=127.0.0.1 \
+          --set-env-vars DB_PORT=5432 \
+          --set-env-vars DB_USERNAME=${{ secrets.DB_USERNAME }} \
+          --set-env-vars DB_DATABASE=${{ secrets.DB_DATABASE }} \
+          --set-env-vars DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+          --set-env-vars DB_SSL_ENABLED=false \
+          --set-env-vars KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
+          --set-env-vars KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} \
+          --set-env-vars KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }} \
+          --set-env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+          --set-env-vars CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }} \
+          --set-env-vars FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+          --set-env-vars DB_SYNCHRONIZE=false \
+          --set-env-vars DB_LOGGING=false \
+          --set-env-vars DART_OPENAPI_KEY=${{ secrets.DART_OPENAPI_KEY }} \
+          --timeout=600s \
+          --port 8080 
+      # ⭐⭐⭐ Dockerfile이 backend 폴더 안에 있으므로 working-directory는 그대로 둠 ⭐⭐⭐
+      working-directory: ./backend
