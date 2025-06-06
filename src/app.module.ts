@@ -10,8 +10,8 @@ import { User } from './users/user.entity';
 // 다른 엔티티들이 있다면 여기에 추가해주세요. 예: import { Stock } from './stock/stock.entity';
 
 // 애플리케이션의 다른 모듈들을 임포트합니다.
-// 예시: UserModule이 있다면 아래와 같이 임포트합니다.
-import { UserModule } from './users/user.module';
+// UsersModule의 파일명과 클래스명에 맞춰 'UsersModule'로 임포트합니다.
+import { UsersModule } from './users/users.module'; // ⭐ './users/user.module' -> './users/users.module'로 수정된 부분 확인
 // 다른 모듈들이 있다면 여기에 추가해주세요. 예: import { AuthModule } from './auth/auth.module';
 // import { StockModule } from './stock/stock.module';
 // import { EventsModule } from './events/events.module';
@@ -28,7 +28,7 @@ import { UserModule } from './users/user.module';
 
     // TypeORM 데이터베이스 연결을 위한 TypeOrmModule 설정
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule], // ConfigService를 사용하기 위해 ConfigModule을 임포트합니다.
+      imports: [ConfigModule], // useFactory에서 ConfigService를 사용하기 위해 ConfigModule을 임포트합니다.
       useFactory: async (configService: ConfigService) => {
         // 환경 변수에서 DB_SSL_ENABLED 값을 가져와 boolean으로 변환합니다.
         const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
@@ -79,9 +79,10 @@ import { UserModule } from './users/user.module';
       inject: [ConfigService], // useFactory 함수에 ConfigService를 주입받도록 명시합니다.
       // DataSource 인스턴스를 생성하고 초기화하는 팩토리 함수입니다.
       // 여기에 데이터베이스 연결 재시도 로직을 포함하여 애플리케이션 시작의 견고성을 높입니다.
-      dataSourceFactory: async (options) => {
+      // ⭐ dataSourceFactory의 options 매개변수 타입을 명시적으로 지정하여 TS2345 오류 해결 ⭐
+      dataSourceFactory: async (options: import('typeorm').DataSourceOptions) => {
         const { DataSource } = await import('typeorm'); // 동적 임포트로 순환 의존성 문제 방지
-        const dataSource = new DataSource(options);
+        const dataSource = new DataSource(options); // 이제 options는 DataSourceOptions 타입으로 간주되어 에러가 발생하지 않습니다.
 
         const maxRetries = 50; // 최대 재시도 횟수
         let retries = maxRetries;
@@ -110,10 +111,10 @@ import { UserModule } from './users/user.module';
     }),
 
     // 여기에 다른 모듈들을 추가합니다.
-    UserModule,
-    // AuthModule,
-    // StockModule,
-    // EventsModule,
+    UsersModule, // ⭐ UserModule -> UsersModule로 변경된 부분 다시 확인
+    // AuthModule, // Auth 모듈이 있다면 주석 해제하여 사용
+    // StockModule, // Stock 모듈이 있다면 주석 해제하여 사용
+    // EventsModule, // Events 모듈이 있다면 주석 해제하여 사용
   ],
   controllers: [], // 컨트롤러는 각 기능 모듈에 정의합니다.
   providers: [],   // 프로바이더는 각 기능 모듈 또는 전역 서비스로 정의합니다.
