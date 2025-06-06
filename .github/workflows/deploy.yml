@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main # main 브랜치에 푸시될 때 워크플로우 실행
-    paths:
-      - 'src/**' # src 폴더 안의 파일이 변경될 때만 실행
-      - 'Dockerfile' # Dockerfile 변경될 때만 실행
 
 env:
   PROJECT_ID: stockweather # 본인의 Google Cloud 프로젝트 ID로 변경
