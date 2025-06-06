@@ -93,5 +93,5 @@ jobs:
             --set-env-vars KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}
             --set-env-vars FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             --add-cloudsql-instances ${{ env.GCP_SQL_INSTANCE_CONNECTION_NAME }}
-            --timeout 300 # 타임아웃 300초 (5분) 설정
+            --timeout 300
             --service-account ${{ env.GCP_SERVICE_ACCOUNT }}
