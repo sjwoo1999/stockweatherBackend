@@ -18,7 +18,6 @@ interface StockSuggestionDto {
     code: string; // 반드시 string 타입이어야 함
     stockCode?: string;
 }
-
 @Controller('api') // <--- 이 부분이 수정되었습니다! 이제 모든 경로는 /api/ 로 시작합니다.
 export class StockController {
     private readonly logger = new Logger(StockController.name);
