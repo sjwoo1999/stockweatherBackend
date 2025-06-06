@@ -3,7 +3,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm'; // MongooseModule 대신 TypeOrmModule 사용 확인
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // 기존 모듈 임포트
@@ -12,18 +12,20 @@ import { UsersModule } from './users/users.module';
 
 // 새로 추가 또는 확인 모듈 임포트
 import { StockModule } from './stock/stock.module';
-import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // ✨ AiAnalysisModule (대소문자 일치) ✨
-import { EventsModule } from './events/events.module'; // ✨ EventsModule 임포트 ✨
+import { AIAnalysisModule } from './ai-analysis/ai-analysis.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
     // 환경 변수 설정을 위한 ConfigModule (가장 상단에 위치하는 것이 좋음)
     ConfigModule.forRoot({
       isGlobal: true, // 애플리케이션 전체에서 ConfigService를 사용할 수 있도록 전역 설정
-      envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local',
+      // Cloud Run과 같은 배포 환경에서는 .env 파일을 사용하지 않으므로,
+      // envFilePath를 제거하여 process.env에서 직접 환경 변수를 로드하도록 합니다.
+      // envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env.local', // 이 줄을 제거했습니다.
     }),
 
-    // 데이터베이스 연결을 위한 TypeOrmModule (MongooseModule 대신 TypeOrmModule을 사용한다고 가정)
+    // 데이터베이스 연결을 위한 TypeOrmModule
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -59,18 +61,14 @@ import { EventsModule } from './events/events.module'; // ✨ EventsModule 임�
     // 애플리케이션의 핵심 기능 모듈들
     AuthModule,
     UsersModule,
-    StockModule,      // StockModule은 NewsModule과 AIAnalysisModule, EventsModule을 내부적으로 임포트함
-    // NewsModule,       // NewsModule 명시적 추가
-    AIAnalysisModule, // ✨ AiAnalysisModule (대소문자 주의) ✨
-    EventsModule,     // ✨ EventsModule 명시적 추가 ✨
+    StockModule,
+    AIAnalysisModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // ✨ EventsGateway는 EventsModule에서 관리되므로 여기서는 제거합니다. ✨
   ],
-  exports: [
-    // ✨ EventsGateway는 EventsModule에서 export 되므로 여기서는 제거합니다. ✨
-  ],
+  exports: [],
 })
 export class AppModule {}
