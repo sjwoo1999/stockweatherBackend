@@ -1,19 +1,22 @@
-# .github/workflows/deploy.yml
+# .github/workflows/deploy.yml (수정 제안)
 name: Deploy Backend to Cloud Run
 
 on:
   push:
     branches:
       - main # main 브랜치에 푸시될 때마다 워크플로우 실행
-    paths:
-      - 'backend/**' # backend 폴더 안의 파일 변경 시 트리거
+    # paths: # ⭐️ 이 부분을 주석 처리하거나 제거해야 합니다.
+    #   - 'backend/**' 
+      # 저장소 루트가 이미 백엔드 폴더이므로, 모든 변경사항에 대해 트리거해야 합니다.
+      # 특정 파일/폴더를 지정하고 싶다면, 'src/**', 'Dockerfile' 등으로 변경해야 합니다.
+      # 여기서는 모든 푸시에 대해 워크플로우가 실행되도록 paths를 제거합니다.
 
 env:
   GCP_PROJECT_ID: stockweather 
   GCP_REGION: asia-northeast3 
   ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy 
-  SERVICE_NAME: stockweather-backend # ⭐ Cloud Run 서비스 이름이 'stockweather-backend'가 맞는지 Cloud Run 콘솔에서 최종 확인하세요!
-  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-cloud-sql # ⭐⭐ 이 값을 실제 Cloud SQL 인스턴스 연결 이름으로 변경해야 합니다! (중요) ⭐⭐
+  SERVICE_NAME: stockweather-backend 
+  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-cloud-sql 
 
 jobs:
   deploy:
@@ -36,7 +39,6 @@ jobs:
       uses: 'google-github-actions/auth@v1'
       with:
         workload_identity_provider: 'projects/${{ env.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-        # ⭐⭐⭐ '@@'를 '@' 하나로 수정! (가장 유력한 인증 실패 원인) ⭐⭐⭐
         service_account: 'stockweather-db-connect@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
 
     - name: Docker Login to Artifact Registry
@@ -46,7 +48,10 @@ jobs:
       run: |
         IMAGE_NAME=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
         
-        # ⭐⭐⭐ working-directory를 사용했으므로 빌드 컨텍스트를 '.'으로 변경 (이전 수정) ⭐⭐⭐
+        # Dockerfile이 저장소 루트에 있으므로 빌드 컨텍스트는 '.'이 맞습니다.
+        # working-directory가 './backend'가 아니므로, Dockerfile 경로를 명시해야 할 수 있습니다.
+        # 하지만 스크린샷에서 Dockerfile이 루트에 있는 것으로 보이므로 이대로 괜찮을 수 있습니다.
+        # Dockerfile이 'stockweather-backend' 루트에 있다면 아래 코드는 괜찮습니다.
         docker build -t $IMAGE_NAME . 
         docker push $IMAGE_NAME
 
@@ -56,7 +61,6 @@ jobs:
           --region ${{ env.GCP_REGION }} \
           --allow-unauthenticated \
           --add-cloudsql-instances ${{ env.GCP_SQL_INSTANCE_CONNECTION_NAME }} \
-          # ⭐⭐⭐ 환경 변수 구문 수정 (각 변수별 --set-env-vars) ⭐⭐⭐
           --set-env-vars DB_HOST=127.0.0.1 \
           --set-env-vars DB_PORT=5432 \
           --set-env-vars DB_USERNAME=${{ secrets.DB_USERNAME }} \
@@ -74,4 +78,4 @@ jobs:
           --set-env-vars DART_OPENAPI_KEY=${{ secrets.DART_OPENAPI_KEY }} \
           --timeout=600s \
           --port 8080 
-      working-directory: ./backend
+      # working-directory: ./backend # ⭐️ 이 라인을 제거해야 합니다! 저장소 루트가 백엔드입니다.
