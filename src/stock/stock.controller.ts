@@ -89,7 +89,7 @@ export class StockController {
 
             const suggestions: StockSuggestionDto[] = suggestedCompanies.map(company => ({
                 name: company.corp_name || '',
-                // ⭐ 수정: corp_code를 명시적으로 String으로 캐스팅하여 undefined 또는 null이 넘어오지 않도록 보장 ⭐
+                // ⭐ 수정: corp_code를 명시적으로 String으로 캐스팅하여 undefined 또는 null이 넘어오지 않도록 보장~ ⭐
                 code: String(company.corp_code || ''), 
                 stockCode: company.stock_code || undefined,
             }));
