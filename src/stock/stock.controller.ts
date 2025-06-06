@@ -19,7 +19,7 @@ interface StockSuggestionDto {
     stockCode?: string;
 }
 
-@Controller()
+@Controller('api') // <--- 이 부분이 수정되었습니다! 이제 모든 경로는 /api/ 로 시작합니다.
 export class StockController {
     private readonly logger = new Logger(StockController.name);
 
@@ -29,7 +29,7 @@ export class StockController {
     ) {}
 
     @UseGuards(JwtAuthGuard)
-    @Post('search')
+    @Post('search') // 이 메서드는 이제 /api/search 경로로 매핑됩니다.
     async searchStock(
         @Body() body: SearchRequestDto,
         @Res() res: Response,
@@ -65,7 +65,7 @@ export class StockController {
     }
 
     // @UseGuards(JwtAuthGuard)
-    @Get('suggest-stocks')
+    @Get('suggest-stocks') // 이 메서드는 이제 /api/suggest-stocks 경로로 매핑됩니다.
     async suggestStocks(
         @Query('query') query: string,
         @Res() res: Response,
