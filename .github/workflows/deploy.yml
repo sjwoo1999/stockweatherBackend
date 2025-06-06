@@ -3,19 +3,24 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches:
-      - main # main 브랜치에 푸시될 때 워크플로우 실행
+      - main
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
 
 env:
   PROJECT_ID: stockweather # 본인의 Google Cloud 프로젝트 ID로 변경
-  SERVICE_NAME: stockweather-backend # Cloud Run 서비스 이름
-  REGION: asia-northeast3 # Cloud Run 배포 리전
-  # Artifact Registry의 호스트, 프로젝트 ID, 리포지토리 이름까지 포함
-  # 실제 이미지 이름은 빌드 및 푸시 단계에서 SERVICE_NAME을 사용합니다.
-  ARTIFACT_REGISTRY_PATH: asia-nnortheast3-docker.pkg.dev/${{ env.PROJECT_ID }}/stockweather-backend # Artifact Registry 리포지토리 경로
-  GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com # 서비스 계정 이메일
-  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-db # Cloud SQL 인스턴스 연결 이름
-  DB_HOST: 127.0.0.1 # Cloud SQL Proxy 사용 시
-  DB_PORT: 5432 # PostgreSQL 기본 포트
+  SERVICE_NAME: stockweather-backend
+  REGION: asia-northeast3
+  # 수정: ARTIFACT_REGISTRY_PATH 정의 방식을 변경합니다.
+  # env.PROJECT_ID를 직접 문자열로 넣거나, 아니면 이 변수 자체를 최하단에서 참조하도록 변경합니다.
+  # 여기서는 PROJECT_ID를 직접 사용하여 오류를 피합니다.
+  # 만약 PROJECT_ID가 'stockweather'라면, 아래는 'asia-northeast3-docker.pkg.dev/stockweather/stockweather-backend'가 됩니다.
+  ARTIFACT_REGISTRY_PATH: asia-northeast3-docker.pkg.dev/stockweather/${{ env.SERVICE_NAME }} # <--- 이 부분을 수정합니다.
+  GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com
+  GCP_SQL_INSTANCE_CONNECTION_NAME: stockweather:asia-northeast3:stockweather-db
+  DB_HOST: 127.0.0.1
+  DB_PORT: 5432
   DB_USERNAME: ${{ secrets.DB_USERNAME }}
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   DB_DATABASE: ${{ secrets.DB_DATABASE }}
@@ -35,47 +40,37 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      # id-token: 'write' # Workload Identity Federation 사용 시 필요 (지금은 사용 안 함)
 
     steps:
       - name: Checkout repository
         uses: 'actions/checkout@v4'
 
-      # Google Cloud 인증 (서비스 계정 키 사용)
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}' # GitHub Secrets에 저장된 서비스 계정 키 사용
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-      # Artifact Registry에 Docker 로그인
       - name: 'Set up Cloud SDK and Docker auth'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           project_id: ${{ env.PROJECT_ID }}
-          # gcloud auth configure-docker artifact-registry는 credentials_json으로 인증된 상태에서 자동 처리됨
 
       - name: 'Configure Docker to use the gcloud command'
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      # Docker 이미지 빌드
       - name: 'Build Docker image'
         run: |
-          # Artifact Registry 경로(리포지토리)에 서비스 이름을 이미지 이름으로 추가하여 빌드합니다.
           docker build -t ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
 
-      # Docker 이미지 Artifact Registry에 푸시
       - name: 'Push Docker image to Artifact Registry'
         run: |
-          # 빌드된 이미지를 정확한 전체 경로로 푸시합니다.
           docker push ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
 
-      # Cloud Run에 배포
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          # Artifact Registry의 전체 이미지 경로를 사용합니다.
           image: ${{ env.ARTIFACT_REGISTRY_PATH }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           flags: |
             --allow-unauthenticated
@@ -90,10 +85,10 @@ jobs:
             --set-env-vars JWT_SECRET=${{ env.JWT_SECRET }}
             --set-env-vars CHATGPT_API_KEY=${{ env.CHATGPT_API_KEY }}
             --set-env-vars DART_OPENAPI_KEY=${{ env.DART_OPENAPI_KEY }}
-            --set-env-vars KAKAO_CLIENT_ID=${{ env.KAKAO_CLIENT_ID }}
-            --set-env-vars KAKAO_CLIENT_SECRET=${{ env.KAKAO_CLIENT_SECRET }}
-            --set-env-vars KAKAO_CALLBACK_URL=${{ env.KAKAO_CALLBACK_URL }}
-            --set-env-vars FRONTEND_URL=${{ env.FRONTEND_URL }}
+            --set-env-vars KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+            --set-env-vars KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+            --set-env-vars KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}
+            --set-env-vars FRONTEND_URL=${{ secrets.FRONTEND_URL }}
             --add-cloudsql-instances ${{ env.GCP_SQL_INSTANCE_CONNECTION_NAME }}
-            --timeout 300 # 타임아웃 300초 (5분) 설정
-            --service-account ${{ env.GCP_SERVICE_ACCOUNT }} # 특정 서비스 계정으로 Cloud Run 서비스 실행 (이전에는 --service-account를 제거했지만, Cloud Run 서비스 자체의 런타임 서비스 계정을 지정하려면 필요함)
+            --timeout 300
+            --service-account ${{ env.GCP_SERVICE_ACCOUNT }}
