@@ -64,7 +64,7 @@ export class StockController {
         }
     }
 
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get('suggest-stocks')
     async suggestStocks(
         @Query('query') query: string,
