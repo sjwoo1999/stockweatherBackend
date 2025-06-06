@@ -19,7 +19,7 @@ interface StockSuggestionDto {
     stockCode?: string;
 }
 
-@Controller('api')
+@Controller()
 export class StockController {
     private readonly logger = new Logger(StockController.name);
 

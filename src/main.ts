@@ -9,7 +9,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 전역 프리픽스 설정 (선택 사항, 필요하다면)
-  // app.setGlobalPrefix('api'); // 예를 들어, 모든 API 엔드포인트 앞에 '/api'를 붙임
+  app.setGlobalPrefix('api'); // 예를 들어, 모든 API 엔드포인트 앞에 '/api'를 붙임
 
   // ⭐ CORS (Cross-Origin Resource Sharing) 설정 수정 ⭐
   // 프론트엔드(Next.js)가 실행되는 주소에서 요청을 허용하도록 설정
