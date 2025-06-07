@@ -17,13 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      # id-token: 'write' # Workload Identity Federation이 아닌 서비스 계정 키 사용 시 필요 없음
 
     steps:
       - name: Checkout repository
         uses: 'actions/checkout@v4'
 
-      # Google Cloud 인증 (서비스 계정 키 사용)
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
@@ -36,23 +34,11 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: 'Install dependencies'
-        run: npm ci # 종속성 설치 (Cloud Functions가 빌드할 때 필요)
+        run: npm ci
 
       - name: 'Build NestJS application'
-        run: npm run build # NestJS 애플리케이션 빌드 (dist 폴더 생성)
+        run: npm run build
 
       - name: 'Deploy to Cloud Functions'
-        run: |
-          gcloud functions deploy ${{ env.FUNCTION_NAME }} \
-            --entry-point=app \
-            --runtime=nodejs20 \
-            --trigger-http \
-            --allow-unauthenticated \
-            --region=${{ env.REGION }} \
-            --project=${{ env.PROJECT_ID }} \
-            --service-account=${{ env.GCP_SERVICE_ACCOUNT }} \
-            --memory=256MB \
-            --timeout=300s \
-            --add-cloudsql-instances=stockweather:asia-northeast3:stockweather \
-            --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=stockweather:asia-northeast3:stockweather" \
-            --set-secrets="DB_USERNAME=projects/${{ env.PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ env.PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ env.PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ env.PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ env.PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ env.PROJECT_ID }}/secrets/FRONTEND_URL:latest"
+        # ⭐⭐⭐ 모든 플래그를 한 줄로 붙여서 전달합니다. ⭐⭐⭐
+        run: gcloud functions deploy ${{ env.FUNCTION_NAME }} --entry-point=app --runtime=nodejs20 --trigger-http --allow-unauthenticated --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} --service-account=${{ env.GCP_SERVICE_ACCOUNT }} --memory=256MB --timeout=300s --add-cloudsql-instances=${{ env.CLOUD_SQL_CONNECTION_NAME }} --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=stockweather:asia-northeast3:stockweather" --set-secrets="DB_USERNAME=projects/${{ env.PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ env.PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ env.PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ env.PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ env.PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ env.PROJECT_ID }}/secrets/FRONTEND_URL:latest"
