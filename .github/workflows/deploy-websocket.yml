@@ -45,11 +45,8 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          # Workload Identity Federation 대신 서비스 계정 키를 사용합니다.
-          # 기존 'workload_identity_provider' 줄을 삭제하거나 주석 처리하고
-          # 아래 'credentials_json' 줄을 추가합니다.
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}' # 이 서비스 계정은 계속 사용됩니다.
+          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}'
 
       - name: 'Set up Cloud SDK and Docker auth'
         uses: 'google-github-actions/setup-gcloud@v2'

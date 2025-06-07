@@ -11,28 +11,6 @@ env:
   REGION: asia-northeast3
   FUNCTION_NAME: stockweather-rest-api # Cloud Functions 함수 이름 (원하는 이름으로 변경)
   GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com # 서비스 계정 확인
-  
-  # Cloud Functions용 환경 변수 (NestJS ConfigService에서 사용될 값들)
-  # Cloud Functions는 Docker 이미지를 사용하지 않고 소스 코드를 배포하므로,
-  # 환경 변수들을 --set-env-vars 플래그를 통해 직접 전달해야 합니다.
-  MODE: 'REST'
-  DB_HOST: 127.0.0.1
-  DB_PORT: 5432
-  # 비밀 값은 secrets에서 가져옵니다.
-  DB_USERNAME: ${{ secrets.DB_USERNAME }}
-  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-  DB_DATABASE: ${{ secrets.DB_DATABASE }}
-  DB_SYNCHRONIZE: 'false' # 프로덕션에서는 false 권장
-  DB_LOGGING: 'false'
-  DB_SSL_ENABLED: 'true' # SSL 사용 여부
-  JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
-  DART_OPENAPI_KEY: ${{ secrets.DART_OPENAPI_KEY }}
-  KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
-  KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
-  KAKAO_CALLBACK_URL: ${{ secrets.KAKAO_CALLBACK_URL }}
-  FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-  CLOUD_SQL_CONNECTION_NAME: stockweather:asia-northeast3:stockweather # Cloud SQL 연결 이름
 
 jobs:
   deploy-functions:
@@ -40,7 +18,6 @@ jobs:
     permissions:
       contents: 'read'
       # id-token: 'write' # Workload Identity Federation이 아닌 서비스 계정 키 사용 시 필요 없음
-                             # 주석 처리 또는 삭제합니다.
 
     steps:
       - name: Checkout repository
@@ -50,11 +27,8 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          # Workload Identity Federation 대신 서비스 계정 키를 사용합니다.
-          # 기존 'workload_identity_provider' 줄을 삭제하거나 주석 처리하고
-          # 아래 'credentials_json' 줄을 추가합니다.
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}' # 이 서비스 계정은 계속 사용됩니다.
+          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}'
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
@@ -79,22 +53,6 @@ jobs:
             --service-account=${{ env.GCP_SERVICE_ACCOUNT }} \
             --memory=256MB \
             --timeout=300s \
-            --add-cloudsql-instances=${{ env.CLOUD_SQL_CONNECTION_NAME }} \
-            --set-env-vars \
-              MODE=${{ env.MODE }}, \
-              DB_HOST=${{ env.DB_HOST }}, \
-              DB_PORT=${{ env.DB_PORT }}, \
-              DB_USERNAME=${{ env.DB_USERNAME }}, \
-              DB_PASSWORD=${{ env.DB_PASSWORD }}, \
-              DB_DATABASE=${{ env.DB_DATABASE }}, \
-              DB_SYNCHRONIZE=${{ env.DB_SYNCHRONIZE }}, \
-              DB_LOGGING=${{ env.DB_LOGGING }}, \
-              DB_SSL_ENABLED=${{ env.DB_SSL_ENABLED }}, \
-              JWT_SECRET=${{ env.JWT_SECRET }}, \
-              CHATGPT_API_KEY=${{ env.CHATGPT_API_KEY }}, \
-              DART_OPENAPI_KEY=${{ env.DART_OPENAPI_KEY }}, \
-              KAKAO_CLIENT_ID=${{ env.KAKAO_CLIENT_ID }}, \
-              KAKAO_CLIENT_SECRET=${{ env.KAKAO_CLIENT_SECRET }}, \
-              KAKAO_CALLBACK_URL=${{ env.KAKAO_CALLBACK_URL }}, \
-              FRONTEND_URL=${{ env.FRONTEND_URL }}, \
-              CLOUD_SQL_CONNECTION_NAME=${{ env.CLOUD_SQL_CONNECTION_NAME }}
+            --add-cloudsql-instances=stockweather:asia-northeast3:stockweather \
+            --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=stockweather:asia-northeast3:stockweather" \
+            --set-secrets="DB_USERNAME=projects/${{ env.PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ env.PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ env.PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ env.PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ env.PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ env.PROJECT_ID }}/secrets/FRONTEND_URL:latest"
