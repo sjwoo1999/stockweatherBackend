@@ -39,19 +39,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write' # Google Cloud 인증에 필요
+      # id-token: 'write' # Workload Identity Federation이 아닌 서비스 계정 키 사용 시 필요 없음
+                             # 주석 처리 또는 삭제합니다.
 
     steps:
       - name: Checkout repository
         uses: 'actions/checkout@v4'
 
-      # Google Cloud 인증 (Workload Identity Federation 사용)
+      # Google Cloud 인증 (서비스 계정 키 사용)
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          # ⭐⭐⭐ 수정된 부분: 프로젝트 번호와 풀 ID만 포함합니다. ⭐⭐⭐
-          workload_identity_provider: 'projects/1011872961068/locations/global/workloadIdentityPools/github-pool/providers/github-pool'
-          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}'
+          # Workload Identity Federation 대신 서비스 계정 키를 사용합니다.
+          # 기존 'workload_identity_provider' 줄을 삭제하거나 주석 처리하고
+          # 아래 'credentials_json' 줄을 추가합니다.
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}' # 이 서비스 계정은 계속 사용됩니다.
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
