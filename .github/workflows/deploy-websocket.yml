@@ -34,7 +34,6 @@ jobs:
         run: docker build -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
-        # ⭐⭐⭐ docker push 명령어도 sh -c "..." 로 감싸봅니다. ⭐⭐⭐
         run: sh -c "docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}"
 
       - name: 'Deploy to Cloud Run'
