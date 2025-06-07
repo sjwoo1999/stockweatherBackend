@@ -6,11 +6,8 @@ on:
     branches:
       - main # main 브랜치에 푸시될 때 워크플로우 실행
 
-env:
-  PROJECT_ID: stockweather
-  REGION: asia-northeast3
-  FUNCTION_NAME: stockweather-rest-api # Cloud Functions 함수 이름 (원하는 이름으로 변경)
-  GCP_SERVICE_ACCOUNT: stockweather-db-connect@stockweather.iam.gserviceaccount.com # 서비스 계정 확인
+# env 섹션은 이제 사용하지 않거나 최소화합니다.
+# 모든 구성은 secrets에서 가져옵니다.
 
 jobs:
   deploy-functions:
@@ -25,13 +22,13 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          service_account: '${{ env.GCP_SERVICE_ACCOUNT }}'
+          credentials_json: '${{ secrets.GCP_SA_KEY }}' # GitHub Secret
+          service_account: '${{ secrets.GCP_SA_EMAIL }}' # GitHub Secret
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }} # GitHub Secret
 
       - name: 'Install dependencies'
         run: npm ci
@@ -40,5 +37,28 @@ jobs:
         run: npm run build
 
       - name: 'Deploy to Cloud Functions'
-        # ⭐⭐⭐ 모든 플래그를 한 줄로 붙여서 전달합니다. ⭐⭐⭐
-        run: gcloud functions deploy ${{ env.FUNCTION_NAME }} --entry-point=app --runtime=nodejs20 --trigger-http --allow-unauthenticated --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} --service-account=${{ env.GCP_SERVICE_ACCOUNT }} --memory=256MB --timeout=300s --add-cloudsql-instances=${{ env.CLOUD_SQL_CONNECTION_NAME }} --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=stockweather:asia-northeast3:stockweather" --set-secrets="DB_USERNAME=projects/${{ env.PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ env.PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ env.PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ env.PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ env.PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ env.PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ env.PROJECT_ID }}/secrets/FRONTEND_URL:latest"
+        # 모든 플래그와 값을 한 줄로 붙여서 전달하여 파싱 오류를 최소화합니다.
+        # 모든 리소스 관련 변수는 GitHub Secrets에서 가져옵니다.
+        # 민감하지 않은 앱 환경 변수는 --set-env-vars로, 민감한 앱 환경 변수는 --set-secrets로 Secret Manager에서 가져옵니다.
+        run: gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
+            --entry-point=app \
+            --runtime=nodejs20 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --region=${{ secrets.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --service-account=${{ secrets.GCP_SA_EMAIL }} \
+            --memory=256MB \
+            --timeout=300s \
+            --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
+            --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
+            --set-secrets="DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
+              DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
+              DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
+              JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,\
+              CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,\
+              DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,\
+              KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,\
+              KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,\
+              KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,\
+              FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest"
