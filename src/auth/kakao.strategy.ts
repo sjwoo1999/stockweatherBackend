@@ -39,28 +39,52 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
         id: profile.id, // 카카오 고유 ID (number)
         email: kakaoAccount?.email, // 이메일 (string | undefined)
         nickname: userProfile?.nickname || profile.displayName, // 닉네임 (string)
-        profileImage: userProfile?.thumbnail_image_url || userProfile?.profile_image_url, // 프로필 이미지 URL (string | undefined)
+        profileImage:
+          userProfile?.thumbnail_image_url || userProfile?.profile_image_url, // 프로필 이미지 URL (string | undefined)
         // 여기에 필요한 카카오 원본 데이터의 다른 필드도 추가할 수 있습니다.
         // 예: gender: kakaoAccount?.gender, age_range: kakaoAccount?.age_range
       };
 
-      console.log('KakaoStrategy: Extracted user info for AuthService:', kakaoUserInfoForService);
+      console.log(
+        'KakaoStrategy: Extracted user info for AuthService:',
+        kakaoUserInfoForService,
+      );
 
       // AuthService를 통해 사용자 정보 DB 처리 및 우리 시스템의 User 객체 반환
-      const user: User = await this.authService.validateUserFromKakao(kakaoUserInfoForService);
+      const user: User = await this.authService.validateUserFromKakao(
+        kakaoUserInfoForService,
+      );
 
       if (!user) {
-        console.error('KakaoStrategy: AuthService failed to validate/create user.');
-        return done(new UnauthorizedException('Kakao authentication failed: User processing issue.'), false);
+        console.error(
+          'KakaoStrategy: AuthService failed to validate/create user.',
+        );
+        return done(
+          new UnauthorizedException(
+            'Kakao authentication failed: User processing issue.',
+          ),
+          false,
+        );
       }
 
       // `done(null, user)`는 NestJS Passport가 `req.user`에 이 `user` 객체(`User` 타입)를 할당하도록 합니다.
-      console.log('KakaoStrategy: Successfully validated user, passing to NestJS:', user);
+      console.log(
+        'KakaoStrategy: Successfully validated user, passing to NestJS:',
+        user,
+      );
       done(null, user);
-
     } catch (error) {
-      console.error('KakaoStrategy: Error during Kakao validation process:', error.message, error.stack);
-      done(new UnauthorizedException('Kakao authentication failed due to an internal error.'), false);
+      console.error(
+        'KakaoStrategy: Error during Kakao validation process:',
+        error.message,
+        error.stack,
+      );
+      done(
+        new UnauthorizedException(
+          'Kakao authentication failed due to an internal error.',
+        ),
+        false,
+      );
     }
   }
 }

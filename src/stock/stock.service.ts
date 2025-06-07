@@ -5,7 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { AIAnalysisService } from '../ai-analysis/ai-analysis.service';
 import { EventsGateway } from '../events/events.gateway';
 import { KeywordMappingService } from './keyword-mapping.service';
-import { DisclosureService, DartCompanyInfo } from '../disclosure/disclosure.service';
+import {
+  DisclosureService,
+  DartCompanyInfo,
+} from '../disclosure/disclosure.service';
 import { UsersService } from '../users/users.service';
 
 import {
@@ -42,7 +45,9 @@ export class StockService {
     socketId: string,
     selectedCorpCode?: string,
   ): Promise<void> {
-    this.logger.log(`[StockService] getStockAnalysisData 호출: query=${query}, socketId=${socketId}, selectedCorpCode=${selectedCorpCode || '없음'}`);
+    this.logger.log(
+      `[StockService] getStockAnalysisData 호출: query=${query}, socketId=${socketId}, selectedCorpCode=${selectedCorpCode || '없음'}`,
+    );
     let companyName: string = query;
     let corpCode: string | undefined = selectedCorpCode;
 
@@ -56,16 +61,26 @@ export class StockService {
       });
 
       if (!corpCode) {
-        this.logger.debug(`[StockService] corpCode 미제공. DART에서 회사 정보 검색 시작: query=${query}`);
+        this.logger.debug(
+          `[StockService] corpCode 미제공. DART에서 회사 정보 검색 시작: query=${query}`,
+        );
         const companies = this.disclosureService.searchCompaniesByName(query);
         if (companies.length > 0) {
           const mainCompany = companies[0];
           companyName = mainCompany.corp_name;
           corpCode = mainCompany.corp_code;
-          this.logger.log(`[StockService] DART에서 회사 정보 매핑 성공: query=${query} -> 회사명=${companyName}, corpCode=${corpCode}`);
+          this.logger.log(
+            `[StockService] DART에서 회사 정보 매핑 성공: query=${query} -> 회사명=${companyName}, corpCode=${corpCode}`,
+          );
         } else {
-          this.logger.warn(`[StockService] DART에서 '${query}'에 대한 회사 정보를 찾을 수 없습니다. 기본 분석 결과 전송.`);
-          const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, "회사 정보를 찾을 수 없어 AI 분석을 수행할 수 없습니다.");
+          this.logger.warn(
+            `[StockService] DART에서 '${query}'에 대한 회사 정보를 찾을 수 없습니다. 기본 분석 결과 전송.`,
+          );
+          const defaultAnalysisResult: AIAnalysisResult =
+            this.aiAnalysisService.createDefaultAnalysisResult(
+              query,
+              '회사 정보를 찾을 수 없어 AI 분석을 수행할 수 없습니다.',
+            );
           const stockData: StockData = {
             name: query,
             code: corpCode,
@@ -79,11 +94,13 @@ export class StockService {
             relatedStocks: defaultAnalysisResult.relatedStocks,
             articles: [], // 공시가 없으므로 빈 배열
           };
-          this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+          this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+            // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
             stock: stockData,
             weatherIcon: 'unknown',
             timestamp: new Date().toISOString(),
-            disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+            disclaimer:
+              '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
             error: `"${query}"에 대한 회사 정보를 찾을 수 없어 AI 분석을 수행할 수 없습니다.`,
             query: query,
             socketId: socketId, // ⭐ socketId 추가 ⭐
@@ -95,11 +112,19 @@ export class StockService {
         const companyInfo = this.disclosureService.getCorpInfoByCode(corpCode);
         if (companyInfo) {
           companyName = companyInfo.corp_name;
-          this.logger.log(`[StockService] 선택된 corpCode로 회사명 확인: corpCode=${corpCode} -> 회사명=${companyName}`);
+          this.logger.log(
+            `[StockService] 선택된 corpCode로 회사명 확인: corpCode=${corpCode} -> 회사명=${companyName}`,
+          );
         } else {
-          this.logger.warn(`[StockService] 선택된 corpCode '${corpCode}'에 대한 회사 정보를 찾을 수 없습니다. 쿼리 '${query}'를 회사명으로 사용.`);
+          this.logger.warn(
+            `[StockService] 선택된 corpCode '${corpCode}'에 대한 회사 정보를 찾을 수 없습니다. 쿼리 '${query}'를 회사명으로 사용.`,
+          );
           // 이 경우에도 defaultAnalysisResult를 보내는 것이 안전합니다.
-          const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, `선택된 회사 코드 '${corpCode}'에 대한 정보를 찾을 수 없습니다.`);
+          const defaultAnalysisResult: AIAnalysisResult =
+            this.aiAnalysisService.createDefaultAnalysisResult(
+              query,
+              `선택된 회사 코드 '${corpCode}'에 대한 정보를 찾을 수 없습니다.`,
+            );
           const stockData: StockData = {
             name: query,
             code: corpCode,
@@ -117,7 +142,8 @@ export class StockService {
             stock: stockData,
             weatherIcon: 'unknown',
             timestamp: new Date().toISOString(),
-            disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+            disclaimer:
+              '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
             error: `선택된 회사 코드 '${corpCode}'에 대한 정보를 찾을 수 없습니다.`,
             query: query,
             socketId: socketId,
@@ -128,7 +154,9 @@ export class StockService {
       }
 
       if (!corpCode) {
-        this.logger.error(`[StockService] 최종적으로 corpCode를 확보하지 못했습니다: query=${query}, selectedCorpCode=${selectedCorpCode || '없음'}`);
+        this.logger.error(
+          `[StockService] 최종적으로 corpCode를 확보하지 못했습니다: query=${query}, selectedCorpCode=${selectedCorpCode || '없음'}`,
+        );
         throw new Error('회사 고유번호를 확인할 수 없습니다.');
       }
 
@@ -139,12 +167,21 @@ export class StockService {
         socketId: socketId,
         message: `'${companyName}'(${corpCode})의 최근 공시 정보를 조회 중입니다.`,
       });
-      this.logger.debug(`[StockService] DART 공시 정보 조회 시작: corpCode=${corpCode}`);
-      const recentDisclosures: DisclosureItem[] = await this.disclosureService.getRecentDisclosures(corpCode, 5); // 최근 5개 공시
+      this.logger.debug(
+        `[StockService] DART 공시 정보 조회 시작: corpCode=${corpCode}`,
+      );
+      const recentDisclosures: DisclosureItem[] =
+        await this.disclosureService.getRecentDisclosures(corpCode, 5); // 최근 5개 공시
 
       if (!recentDisclosures || recentDisclosures.length === 0) {
-        this.logger.warn(`[StockService] '${companyName}'(${corpCode})에 대한 최근 공시 정보가 없습니다. 기본 분석 결과 전송.`);
-        const defaultAnalysisResult: AIAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, "최근 공시 정보가 없어 AI 분석을 수행할 수 없습니다.");
+        this.logger.warn(
+          `[StockService] '${companyName}'(${corpCode})에 대한 최근 공시 정보가 없습니다. 기본 분석 결과 전송.`,
+        );
+        const defaultAnalysisResult: AIAnalysisResult =
+          this.aiAnalysisService.createDefaultAnalysisResult(
+            query,
+            '최근 공시 정보가 없어 AI 분석을 수행할 수 없습니다.',
+          );
         const stockData: StockData = {
           name: companyName,
           code: corpCode,
@@ -158,11 +195,13 @@ export class StockService {
           relatedStocks: defaultAnalysisResult.relatedStocks,
           articles: [], // 공시가 없으므로 빈 배열
         };
-        this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+        this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+          // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
           stock: stockData,
           weatherIcon: 'unknown',
           timestamp: new Date().toISOString(),
-          disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+          disclaimer:
+            '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
           error: `"${companyName}"에 대한 최근 공시 정보가 없어 AI 분석을 수행할 수 없습니다.`,
           query: query,
           socketId: socketId, // ⭐ socketId 추가 ⭐
@@ -178,7 +217,9 @@ export class StockService {
         socketId: socketId,
         message: `AI가 '${companyName}'의 공시 데이터를 분석 중입니다. (${recentDisclosures.length}개 공시)`,
       });
-      this.logger.log(`[StockService] AI 분석 서비스 호출: 회사명=${companyName}, 공시 ${recentDisclosures.length}개`);
+      this.logger.log(
+        `[StockService] AI 분석 서비스 호출: 회사명=${companyName}, 공시 ${recentDisclosures.length}개`,
+      );
       let aiAnalysisResult: AIAnalysisResult;
       try {
         aiAnalysisResult = await this.aiAnalysisService.analyzeStockData(
@@ -186,12 +227,19 @@ export class StockService {
           recentDisclosures,
           socketId, // ⭐ AIAnalysisService로 socketId 전달 ⭐
           corpCode, // ⭐ AIAnalysisService로 corpCode 전달 ⭐
-          query // ⭐ AIAnalysisService로 query 전달 ⭐
+          query, // ⭐ AIAnalysisService로 query 전달 ⭐
         );
-        this.logger.log(`[StockService] AI 분석 성공: 회사명=${companyName}, 요약=${aiAnalysisResult.weatherSummary}`);
+        this.logger.log(
+          `[StockService] AI 분석 성공: 회사명=${companyName}, 요약=${aiAnalysisResult.weatherSummary}`,
+        );
       } catch (aiError) {
-        this.logger.error(`[StockService] AI 분석 중 오류 발생 (${companyName}): ${aiError.message}`);
-        aiAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(query, `AI 분석 중 오류 발생: ${aiError.message}`);
+        this.logger.error(
+          `[StockService] AI 분석 중 오류 발생 (${companyName}): ${aiError.message}`,
+        );
+        aiAnalysisResult = this.aiAnalysisService.createDefaultAnalysisResult(
+          query,
+          `AI 분석 중 오류 발생: ${aiError.message}`,
+        );
       }
 
       // 4. 최종 DTO 구성 및 클라이언트에 전송
@@ -210,24 +258,36 @@ export class StockService {
         overallNewsSummary: aiAnalysisResult.overallNewsSummary, // AIAnalysisResult에 있다면 사용
       };
 
-      const weatherIcon = this.getWeatherIconBasedOnSentiment(aiAnalysisResult.overallSentiment);
+      const weatherIcon = this.getWeatherIconBasedOnSentiment(
+        aiAnalysisResult.overallSentiment,
+      );
 
       const finalResponse: StockWeatherResponseDto = {
         stock: stockData,
         weatherIcon: weatherIcon,
         timestamp: new Date().toISOString(),
-        disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+        disclaimer:
+          '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
         query: query,
         socketId: socketId, // ⭐ socketId 필수 포함 ⭐
         newsCount: recentDisclosures.length, // 조회된 공시 개수 포함
       };
 
-      this.eventsGateway.sendToClient(socketId, 'processingComplete', finalResponse); // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
-      this.logger.log(`[StockService] '${companyName}' 분석 결과 클라이언트에 성공적으로 전송 (socketId: ${socketId})`);
-
+      this.eventsGateway.sendToClient(
+        socketId,
+        'processingComplete',
+        finalResponse,
+      ); // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+      this.logger.log(
+        `[StockService] '${companyName}' 분석 결과 클라이언트에 성공적으로 전송 (socketId: ${socketId})`,
+      );
     } catch (error) {
-      this.logger.error(`[StockService] 주식 분석 중 치명적인 오류 발생: ${error.message}`, error.stack);
-      this.eventsGateway.sendToClient(socketId, 'processingComplete', { // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
+      this.logger.error(
+        `[StockService] 주식 분석 중 치명적인 오류 발생: ${error.message}`,
+        error.stack,
+      );
+      this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+        // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
         stock: {
           name: companyName,
           code: corpCode,
@@ -240,7 +300,8 @@ export class StockService {
             positiveFactors: '',
             negativeFactors: '',
             neutralFactors: '',
-            overallOpinion: '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+            overallOpinion:
+              '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
           },
           investmentOpinion: { opinion: '관망', confidence: 0 },
           relatedStocks: [],
@@ -249,7 +310,8 @@ export class StockService {
         },
         weatherIcon: 'unknown',
         timestamp: new Date().toISOString(),
-        disclaimer: '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
+        disclaimer:
+          '제공된 정보는 투자 자문이 아니며, 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.',
         error: error.message || '알 수 없는 서버 오류가 발생했습니다.',
         query: query,
         socketId: socketId, // ⭐ socketId 필수 포함 ⭐
@@ -263,7 +325,9 @@ export class StockService {
    * @param sentiment AI 분석의 전반적 감성
    * @returns 날씨 아이콘 문자열
    */
-  private getWeatherIconBasedOnSentiment(sentiment: StockData['overallSentiment']): StockWeatherResponseDto['weatherIcon'] {
+  private getWeatherIconBasedOnSentiment(
+    sentiment: StockData['overallSentiment'],
+  ): StockWeatherResponseDto['weatherIcon'] {
     switch (sentiment) {
       case 'VERY_POSITIVE':
       case 'POSITIVE':

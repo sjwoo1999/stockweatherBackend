@@ -36,6 +36,7 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: sh -c "docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}"
 
+      # .github/workflows/deploy-websocket.yml 파일 내의 해당 부분
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
@@ -50,8 +51,7 @@ jobs:
             --set-env-vars="MODE=WS,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}"
             --port 3000
             --min-instances 1
-          # ⭐⭐⭐ 이 부분이 핵심 수정입니다! secrets 필드를 변경합니다. ⭐⭐⭐
-          secrets: |
+          secrets: | # ⭐⭐⭐ 이 부분을 정확히 수정해야 합니다! ⭐⭐⭐
             DB_USERNAME=DB_USERNAME:latest
             DB_PASSWORD=DB_PASSWORD:latest
             DB_DATABASE=DB_DATABASE:latest

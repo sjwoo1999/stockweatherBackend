@@ -7,6 +7,10 @@ export interface ErrorResponseDto {
 }
 
 // Define an interface for your WebSocket gateway methods
-export interface IEventsGateway { // Use 'I' prefix for interfaces is a common convention
-  sendProcessingComplete(clientId: string, data: StockWeatherResponseDto | ErrorResponseDto): void;
+export interface IEventsGateway {
+  // Use 'I' prefix for interfaces is a common convention
+  sendProcessingComplete(
+    clientId: string,
+    data: StockWeatherResponseDto | ErrorResponseDto,
+  ): void;
 }

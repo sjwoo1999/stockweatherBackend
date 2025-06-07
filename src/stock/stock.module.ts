@@ -20,10 +20,7 @@ import { UsersModule } from '../users/users.module'; // ⭐ 추가: UsersModule 
     ConfigModule,
     UsersModule, // ⭐ 중요: UsersModule 추가 ⭐
   ],
-  providers: [
-    StockService,
-    KeywordMappingService,
-  ],
+  providers: [StockService, KeywordMappingService],
   controllers: [StockController],
   exports: [StockService],
 })

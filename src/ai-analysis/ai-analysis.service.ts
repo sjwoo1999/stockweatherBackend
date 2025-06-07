@@ -3,7 +3,12 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'; // forwardRef 추가
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { AIAnalysisResult, KeywordSentiment, InvestmentOpinion, RelatedStock } from '../types/stock'; // AIAnalysisResult는 백엔드 types/stock에 정의되어 있다고 가정
+import {
+  AIAnalysisResult,
+  KeywordSentiment,
+  InvestmentOpinion,
+  RelatedStock,
+} from '../types/stock'; // AIAnalysisResult는 백엔드 types/stock에 정의되어 있다고 가정
 import { DisclosureItem } from '../disclosure/interfaces/disclosure-item.interface';
 import { EventsGateway } from '../events/events.gateway'; // EventsGateway import
 
@@ -43,19 +48,29 @@ export class AIAnalysisService {
     disclosures: DisclosureItem[],
     socketId: string,
     corpCode: string,
-    query: string
+    query: string,
   ): Promise<AIAnalysisResult> {
-    this.logger.log(`[AIAnalysisService] analyzeStockData 호출됨. 종목: '${stockName}', 공시 수: ${disclosures.length}`);
+    this.logger.log(
+      `[AIAnalysisService] analyzeStockData 호출됨. 종목: '${stockName}', 공시 수: ${disclosures.length}`,
+    );
 
     if (disclosures.length === 0) {
-      this.logger.warn(`[AIAnalysisService] 공시 정보 부족. '${stockName}'에 대한 기본 분석 결과 반환.`);
-      return this.createDefaultAnalysisResult(stockName, "공시 정보가 부족하여 분석을 수행하기 어렵습니다.");
+      this.logger.warn(
+        `[AIAnalysisService] 공시 정보 부족. '${stockName}'에 대한 기본 분석 결과 반환.`,
+      );
+      return this.createDefaultAnalysisResult(
+        stockName,
+        '공시 정보가 부족하여 분석을 수행하기 어렵습니다.',
+      );
     }
 
     // 공시 내용을 프롬프트에 포함하기 위한 텍스트 형식화
-    const disclosureText = disclosures.map((item, index) =>
-      `공시 ${index + 1}:\n보고서명: ${item.report_nm}\n제출인: ${item.flr_nm}\n회사명: ${item.corp_name}\n접수일: ${item.rcept_dt}\n접수번호: ${item.rcept_no}\n${item.rmk ? `비고: ${item.rmk}\n` : ''}${item.reprt_code ? `보고서코드: ${item.reprt_code}\n` : ''}${item.bsns_year ? `사업연도: ${item.bsns_year}` : ''}`
-    ).join('\n---\n'); // 각 공시를 구분하기 위한 구분선
+    const disclosureText = disclosures
+      .map(
+        (item, index) =>
+          `공시 ${index + 1}:\n보고서명: ${item.report_nm}\n제출인: ${item.flr_nm}\n회사명: ${item.corp_name}\n접수일: ${item.rcept_dt}\n접수번호: ${item.rcept_no}\n${item.rmk ? `비고: ${item.rmk}\n` : ''}${item.reprt_code ? `보고서코드: ${item.reprt_code}\n` : ''}${item.bsns_year ? `사업연도: ${item.bsns_year}` : ''}`,
+      )
+      .join('\n---\n'); // 각 공시를 구분하기 위한 구분선
 
     const prompt = `
     너는 숙련된 주식 시장 전문가이자 금융 분석가이다.
@@ -128,12 +143,14 @@ export class AIAnalysisService {
     try {
       // 1단계 진행 상황 알림 (AI API 호출 전)
       this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
-          query: query,
-          corpCode: corpCode,
-          socketId: socketId,
-          message: `AI가 '${stockName}'의 공시 데이터를 분석 중입니다. (1/2단계)`,
+        query: query,
+        corpCode: corpCode,
+        socketId: socketId,
+        message: `AI가 '${stockName}'의 공시 데이터를 분석 중입니다. (1/2단계)`,
       });
-      this.logger.debug(`[AIAnalysisService] Emitting 'analysisProgress' (1/2) to ${socketId}`);
+      this.logger.debug(
+        `[AIAnalysisService] Emitting 'analysisProgress' (1/2) to ${socketId}`,
+      );
 
       const completion = await this.openai.chat.completions.create({
         model: this.model,
@@ -142,23 +159,25 @@ export class AIAnalysisService {
           { role: 'user', content: `[종목명]: ${stockName}` },
         ],
         temperature: 0.7,
-        response_format: { type: "json_object" },
+        response_format: { type: 'json_object' },
       });
 
       const rawResponse = completion.choices[0].message.content;
       if (!rawResponse) {
-        throw new Error("AI 응답 내용이 비어 있습니다.");
+        throw new Error('AI 응답 내용이 비어 있습니다.');
       }
       this.logger.debug(`[AIAnalysisService] Raw AI Response: ${rawResponse}`);
 
       // 2단계 진행 상황 알림 (AI API 호출 후 JSON 파싱 전)
       this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
-          query: query,
-          corpCode: corpCode,
-          socketId: socketId,
-          message: `AI 분석 결과를 요약 중입니다. (2/2단계)`,
+        query: query,
+        corpCode: corpCode,
+        socketId: socketId,
+        message: `AI 분석 결과를 요약 중입니다. (2/2단계)`,
       });
-      this.logger.debug(`[AIAnalysisService] Emitting 'analysisProgress' (2/2) to ${socketId}`);
+      this.logger.debug(
+        `[AIAnalysisService] Emitting 'analysisProgress' (2/2) to ${socketId}`,
+      );
 
       let parsedResult: AIAnalysisResult;
       try {
@@ -166,83 +185,157 @@ export class AIAnalysisService {
         // 응답 데이터 유효성 검사 및 타입 강제 변환/기본값 설정
 
         // overallSentiment 유효성 검사 및 수정
-        const validSentiments = ['VERY_POSITIVE', 'POSITIVE', 'NEUTRAL', 'NEGATIVE', 'VERY_NEGATIVE'];
+        const validSentiments = [
+          'VERY_POSITIVE',
+          'POSITIVE',
+          'NEUTRAL',
+          'NEGATIVE',
+          'VERY_NEGATIVE',
+        ];
         if (!validSentiments.includes(parsedResult.overallSentiment)) {
-            this.logger.warn(`[AIAnalysisService] Invalid overallSentiment received: ${parsedResult.overallSentiment}. Setting to NEUTRAL.`);
-            parsedResult.overallSentiment = 'NEUTRAL';
+          this.logger.warn(
+            `[AIAnalysisService] Invalid overallSentiment received: ${parsedResult.overallSentiment}. Setting to NEUTRAL.`,
+          );
+          parsedResult.overallSentiment = 'NEUTRAL';
         }
 
         // sentimentScore 유효성 검사
-        if (typeof parsedResult.sentimentScore !== 'number' || parsedResult.sentimentScore < 0 || parsedResult.sentimentScore > 1) {
-            this.logger.warn(`[AIAnalysisService] Invalid sentimentScore received: ${parsedResult.sentimentScore}. Setting to 0.5.`);
-            parsedResult.sentimentScore = 0.5;
+        if (
+          typeof parsedResult.sentimentScore !== 'number' ||
+          parsedResult.sentimentScore < 0 ||
+          parsedResult.sentimentScore > 1
+        ) {
+          this.logger.warn(
+            `[AIAnalysisService] Invalid sentimentScore received: ${parsedResult.sentimentScore}. Setting to 0.5.`,
+          );
+          parsedResult.sentimentScore = 0.5;
         }
 
         // keywords 유효성 검사
-        if (!Array.isArray(parsedResult.keywords) || !parsedResult.keywords.every(k => typeof k.text === 'string' && validSentiments.includes(k.sentiment))) {
-            this.logger.warn(`[AIAnalysisService] Keywords field is not in expected format. Attempting to fix.`);
-            parsedResult.keywords = (parsedResult.keywords as any[] || []).map(k => ({
-                text: k.text || 'unknown',
-                sentiment: validSentiments.includes(k.sentiment) ? k.sentiment : 'NEUTRAL'
-            })) as KeywordSentiment[];
+        if (
+          !Array.isArray(parsedResult.keywords) ||
+          !parsedResult.keywords.every(
+            (k) =>
+              typeof k.text === 'string' &&
+              validSentiments.includes(k.sentiment),
+          )
+        ) {
+          this.logger.warn(
+            `[AIAnalysisService] Keywords field is not in expected format. Attempting to fix.`,
+          );
+          parsedResult.keywords = ((parsedResult.keywords as any[]) || []).map(
+            (k) => ({
+              text: k.text || 'unknown',
+              sentiment: validSentiments.includes(k.sentiment)
+                ? k.sentiment
+                : 'NEUTRAL',
+            }),
+          ) as KeywordSentiment[];
         }
 
         // detailedAnalysis 유효성 검사
-        if (typeof parsedResult.detailedAnalysis !== 'object' || parsedResult.detailedAnalysis === null) {
-            this.logger.warn(`[AIAnalysisService] detailedAnalysis field is not an object or is null after parsing. Fixing.`);
-            parsedResult.detailedAnalysis = {
-                positiveFactors: (parsedResult.detailedAnalysis as any)?.positiveFactors || '분석 결과가 올바르지 않습니다.',
-                negativeFactors: (parsedResult.detailedAnalysis as any)?.negativeFactors || '분석 결과가 올바르지 않습니다.',
-                neutralFactors: (parsedResult.detailedAnalysis as any)?.neutralFactors || '분석 결과가 올바르지 않습니다.',
-                overallOpinion: (parsedResult.detailedAnalysis as any)?.overallOpinion || 'AI 응답 형식 오류.',
-            };
+        if (
+          typeof parsedResult.detailedAnalysis !== 'object' ||
+          parsedResult.detailedAnalysis === null
+        ) {
+          this.logger.warn(
+            `[AIAnalysisService] detailedAnalysis field is not an object or is null after parsing. Fixing.`,
+          );
+          parsedResult.detailedAnalysis = {
+            positiveFactors:
+              (parsedResult.detailedAnalysis as any)?.positiveFactors ||
+              '분석 결과가 올바르지 않습니다.',
+            negativeFactors:
+              (parsedResult.detailedAnalysis as any)?.negativeFactors ||
+              '분석 결과가 올바르지 않습니다.',
+            neutralFactors:
+              (parsedResult.detailedAnalysis as any)?.neutralFactors ||
+              '분석 결과가 올바르지 않습니다.',
+            overallOpinion:
+              (parsedResult.detailedAnalysis as any)?.overallOpinion ||
+              'AI 응답 형식 오류.',
+          };
         }
 
         // investmentOpinion 유효성 검사
-        const validOpinions = ['매수', '적정 매수', '관망', '적정 매도', '매도'];
-        if (typeof parsedResult.investmentOpinion !== 'object' || parsedResult.investmentOpinion === null || !validOpinions.includes(parsedResult.investmentOpinion.opinion) || typeof parsedResult.investmentOpinion.confidence !== 'number') {
-            this.logger.warn(`[AIAnalysisService] investmentOpinion field is not in expected format. Fixing.`);
-            parsedResult.investmentOpinion = {
-                opinion: validOpinions.includes(parsedResult.investmentOpinion?.opinion) ? parsedResult.investmentOpinion.opinion : '관망',
-                confidence: typeof parsedResult.investmentOpinion?.confidence === 'number' ? parsedResult.investmentOpinion.confidence : 0,
-                reason: parsedResult.investmentOpinion?.reason || 'AI 응답 형식 오류.',
-            };
+        const validOpinions = [
+          '매수',
+          '적정 매수',
+          '관망',
+          '적정 매도',
+          '매도',
+        ];
+        if (
+          typeof parsedResult.investmentOpinion !== 'object' ||
+          parsedResult.investmentOpinion === null ||
+          !validOpinions.includes(parsedResult.investmentOpinion.opinion) ||
+          typeof parsedResult.investmentOpinion.confidence !== 'number'
+        ) {
+          this.logger.warn(
+            `[AIAnalysisService] investmentOpinion field is not in expected format. Fixing.`,
+          );
+          parsedResult.investmentOpinion = {
+            opinion: validOpinions.includes(
+              parsedResult.investmentOpinion?.opinion,
+            )
+              ? parsedResult.investmentOpinion.opinion
+              : '관망',
+            confidence:
+              typeof parsedResult.investmentOpinion?.confidence === 'number'
+                ? parsedResult.investmentOpinion.confidence
+                : 0,
+            reason:
+              parsedResult.investmentOpinion?.reason || 'AI 응답 형식 오류.',
+          };
         }
 
         // relatedStocks 유효성 검사
         if (!Array.isArray(parsedResult.relatedStocks)) {
-            this.logger.warn(`[AIAnalysisService] relatedStocks field is not an array. Fixing.`);
-            parsedResult.relatedStocks = [];
+          this.logger.warn(
+            `[AIAnalysisService] relatedStocks field is not an array. Fixing.`,
+          );
+          parsedResult.relatedStocks = [];
         } else {
-             parsedResult.relatedStocks = parsedResult.relatedStocks.map(rs => ({
-                name: rs.name || 'unknown',
-                opinion: validOpinions.includes(rs.opinion) ? rs.opinion : '관망',
-                confidence: typeof rs.confidence === 'number' ? rs.confidence : 0,
-                relationship: rs.relationship || 'unknown'
-            }));
+          parsedResult.relatedStocks = parsedResult.relatedStocks.map((rs) => ({
+            name: rs.name || 'unknown',
+            opinion: validOpinions.includes(rs.opinion) ? rs.opinion : '관망',
+            confidence: typeof rs.confidence === 'number' ? rs.confidence : 0,
+            relationship: rs.relationship || 'unknown',
+          }));
         }
 
         // overallNewsSummary 유효성 검사
         if (typeof parsedResult.overallNewsSummary !== 'string') {
-            this.logger.warn(`[AIAnalysisService] overallNewsSummary is not a string. Setting to default.`);
-            parsedResult.overallNewsSummary = '전체 공시 요약 정보를 불러올 수 없습니다.';
+          this.logger.warn(
+            `[AIAnalysisService] overallNewsSummary is not a string. Setting to default.`,
+          );
+          parsedResult.overallNewsSummary =
+            '전체 공시 요약 정보를 불러올 수 없습니다.';
         }
-
-
       } catch (jsonError) {
-        this.logger.error(`[AIAnalysisService] JSON 파싱 실패: ${jsonError.message}, 원본 응답: ${rawResponse}`);
+        this.logger.error(
+          `[AIAnalysisService] JSON 파싱 실패: ${jsonError.message}, 원본 응답: ${rawResponse}`,
+        );
         throw new Error(`AI 응답 파싱 실패: ${jsonError.message}`);
       }
 
-      this.logger.log(`[AIAnalysisService] AI analysis successful for '${stockName}'.`);
+      this.logger.log(
+        `[AIAnalysisService] AI analysis successful for '${stockName}'.`,
+      );
       return parsedResult;
-
     } catch (error) {
-      this.logger.error(`[AIAnalysisService] Error during AI analysis for '${stockName}': ${error.message}`);
+      this.logger.error(
+        `[AIAnalysisService] Error during AI analysis for '${stockName}': ${error.message}`,
+      );
       if (error.response) {
-        this.logger.error(`[AIAnalysisService] OpenAI API Response Error: ${JSON.stringify(error.response.data)}`);
+        this.logger.error(
+          `[AIAnalysisService] OpenAI API Response Error: ${JSON.stringify(error.response.data)}`,
+        );
       }
-      return this.createDefaultAnalysisResult(stockName, `AI 분석 중 오류 발생: ${error.message}`);
+      return this.createDefaultAnalysisResult(
+        stockName,
+        `AI 분석 중 오류 발생: ${error.message}`,
+      );
     }
   }
 
@@ -252,7 +345,10 @@ export class AIAnalysisService {
    * @param errorMessage 에러 메시지 또는 부족한 정보에 대한 설명
    * @returns AIAnalysisResult 형식의 기본 분석 결과 객체
    */
-  public createDefaultAnalysisResult(stockName: string, errorMessage: string): AIAnalysisResult {
+  public createDefaultAnalysisResult(
+    stockName: string,
+    errorMessage: string,
+  ): AIAnalysisResult {
     return {
       weatherSummary: '분석 중 오류 발생 또는 정보 부족',
       overallSentiment: 'NEUTRAL',
@@ -265,7 +361,11 @@ export class AIAnalysisService {
         neutralFactors: '공시 정보가 부족하거나 분석에 실패했습니다.',
         overallOpinion: errorMessage,
       },
-      investmentOpinion: { opinion: '관망', confidence: 0.5, reason: errorMessage },
+      investmentOpinion: {
+        opinion: '관망',
+        confidence: 0.5,
+        reason: errorMessage,
+      },
       relatedStocks: [],
       overallNewsSummary: errorMessage, // overallNewsSummary 필드 추가
     };

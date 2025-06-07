@@ -20,16 +20,17 @@ export class AuthService {
 
   // ⭐⭐⭐ 이 메서드의 `kakaoUserInfo` 타입 정의를 더 정확히 해야 합니다! ⭐⭐⭐
   // KakaoStrategy에서 넘겨주는 객체 구조에 맞춰 필드를 직접 받도록 변경
-  async validateUserFromKakao(
-    kakaoUserInfo: {
-      id: string | number; // 카카오 ID는 number로 넘어올 수 있으니 string 또는 number로
-      nickname?: string;
-      email?: string;
-      profileImage?: string;
-    }
-  ): Promise<User> {
+  async validateUserFromKakao(kakaoUserInfo: {
+    id: string | number; // 카카오 ID는 number로 넘어올 수 있으니 string 또는 number로
+    nickname?: string;
+    email?: string;
+    profileImage?: string;
+  }): Promise<User> {
     console.log('AuthService: validateUserFromKakao 호출됨');
-    console.log('Kakao User Info received by validateUserFromKakao (from strategy):', kakaoUserInfo);
+    console.log(
+      'Kakao User Info received by validateUserFromKakao (from strategy):',
+      kakaoUserInfo,
+    );
 
     // 카카오 ID는 항상 string으로 통일하여 처리
     const kakaoId = kakaoUserInfo.id.toString();
@@ -42,7 +43,9 @@ export class AuthService {
     let user = await this.usersService.findByKakaoId(kakaoId);
 
     if (!user) {
-      console.log(`User with kakaoId ${kakaoId} not found in DB, creating new user...`);
+      console.log(
+        `User with kakaoId ${kakaoId} not found in DB, creating new user...`,
+      );
       user = await this.usersService.createKakaoUser({
         kakaoId: kakaoId,
         nickname: nickname, // KakaoStrategy에서 정제된 닉네임 사용
@@ -79,7 +82,9 @@ export class AuthService {
             return this.usersRepository.save(user); // TypeORM은 엔티티가 존재하면 업데이트, 없으면 삽입
         }
         */
-        console.log('Existing user info updated in memory. Remember to save to DB if needed.');
+        console.log(
+          'Existing user info updated in memory. Remember to save to DB if needed.',
+        );
       }
     }
     return user;
@@ -89,7 +94,9 @@ export class AuthService {
     console.log(`AuthService: validateUserById 호출됨 (ID: ${userId})`);
     const user = await this.usersService.findById(userId);
     if (!user) {
-      console.warn(`AuthService: User with ID ${userId} not found during validation.`);
+      console.warn(
+        `AuthService: User with ID ${userId} not found during validation.`,
+      );
       return null;
     }
     // 이 메서드의 목적은 JWT Payload의 sub(userId)를 통해 User 객체를 가져오는 것입니다.
@@ -100,8 +107,13 @@ export class AuthService {
   async login(user: User): Promise<{ access_token: string }> {
     console.log('AuthService: login 호출됨. 사용자 정보:', user);
     if (!user || !user.id || !user.kakaoId || !user.nickname) {
-      console.error('AuthService: Invalid user object for JWT payload generation.', user);
-      throw new UnauthorizedException('JWT 토큰 생성을 위한 사용자 정보가 불완전합니다.');
+      console.error(
+        'AuthService: Invalid user object for JWT payload generation.',
+        user,
+      );
+      throw new UnauthorizedException(
+        'JWT 토큰 생성을 위한 사용자 정보가 불완전합니다.',
+      );
     }
 
     const payload: JwtPayload = {

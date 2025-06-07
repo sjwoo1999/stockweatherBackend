@@ -22,7 +22,10 @@ async function bootstrap() {
 
   // NestJS 애플리케이션 인스턴스를 생성합니다.
   // Cloud Functions 모드에서는 ExpressAdapter를 사용합니다.
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressApp),
+  );
 
   // 전역 프리픽스 설정: 모든 API 엔드포인트 앞에 'api'를 붙입니다.
   // Controller에 이미 '/api'가 붙어 있다면 중복될 수 있으니 확인 후 설정
@@ -32,11 +35,13 @@ async function bootstrap() {
   // app.setGlobalPrefix('api'); // ⭐ 이 줄을 제거하거나, StockController에서 @Controller('api')를 @Controller('')로 변경해야 합니다.
 
   // 전역 유효성 검사 파이프 추가 (모든 API 요청에 적용)
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // DTO에 정의되지 않은 속성 자동 제거
-    forbidNonWhitelisted: true, // DTO에 정의되지 않은 속성이 있으면 오류 발생
-    transform: true, // DTO 타입으로 자동 변환 (예: URL 파라미터나 쿼리 문자열을 숫자 등으로 자동 변환)
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // DTO에 정의되지 않은 속성 자동 제거
+      forbidNonWhitelisted: true, // DTO에 정의되지 않은 속성이 있으면 오류 발생
+      transform: true, // DTO 타입으로 자동 변환 (예: URL 파라미터나 쿼리 문자열을 숫자 등으로 자동 변환)
+    }),
+  );
 
   // CORS (Cross-Origin Resource Sharing) 설정
   app.enableCors({
@@ -59,7 +64,8 @@ async function bootstrap() {
   }
 
   // Swagger (API 문서) 설정 - 개발 환경에서만 활성화 또는 REST 모드에서만 활성화
-  if (process.env.NODE_ENV === 'development' || process.env.MODE === 'REST') { // REST API용으로만 Swagger 설정
+  if (process.env.NODE_ENV === 'development' || process.env.MODE === 'REST') {
+    // REST API용으로만 Swagger 설정
     const config = new DocumentBuilder()
       .setTitle('StockWeather Backend API')
       .setDescription('The StockWeather Backend API description')
@@ -71,16 +77,19 @@ async function bootstrap() {
     logger.log('Swagger UI enabled at /api-docs');
   }
 
-
   // Cloud Functions와 Cloud Run 모드 분기
   if (process.env.MODE === 'REST') {
     // Cloud Functions 모드: Express 앱을 직접 export하고 NestJS 앱을 초기화만 합니다.
     await app.init(); // NestJS 앱 초기화 (listen 대신)
-    logger.log('NestJS application initialized for Cloud Functions (REST API mode).');
+    logger.log(
+      'NestJS application initialized for Cloud Functions (REST API mode).',
+    );
   } else {
     // Cloud Run (또는 로컬 개발) 모드: 포트 리스닝
     await app.listen(port);
-    logger.log(`Application is running on: ${await app.getUrl()} (WebSocket/Full Service mode).`);
+    logger.log(
+      `Application is running on: ${await app.getUrl()} (WebSocket/Full Service mode).`,
+    );
     logger.log('Application is fully initialized and listening for requests.');
   }
 }

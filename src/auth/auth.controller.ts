@@ -41,13 +41,22 @@ export class AuthController {
 
     // 사용자 정보가 없거나 유효하지 않은 경우 에러 처리 및 로그인 페이지로 리다이렉트
     if (!user || !user.id) {
-      console.error('AuthController: req.user에 유효한 사용자 정보가 없습니다. (AuthGuard 문제 또는 데이터 누락)');
+      console.error(
+        'AuthController: req.user에 유효한 사용자 정보가 없습니다. (AuthGuard 문제 또는 데이터 누락)',
+      );
       // FRONTEND_URL을 ConfigService에서 가져옵니다.
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
       return res.redirect(`${frontendUrl}/login?error=auth_failed`);
     }
 
-    console.log('AuthController: 사용자 정보 확인됨 - ID:', user.id, 'Nickname:', user.nickname);
+    console.log(
+      'AuthController: 사용자 정보 확인됨 - ID:',
+      user.id,
+      'Nickname:',
+      user.nickname,
+    );
 
     try {
       // 인증 서비스(AuthService)를 통해 JWT 토큰을 발급합니다.
@@ -55,21 +64,30 @@ export class AuthController {
       const jwtResponse = await this.authService.login(user);
       const jwtToken = jwtResponse.access_token; // JWT 토큰 추출
 
-      console.log('AuthController: JWT 토큰 생성 성공. 토큰 앞부분:', jwtToken.substring(0, 30) + '...'); // 전체 토큰 노출 방지
+      console.log(
+        'AuthController: JWT 토큰 생성 성공. 토큰 앞부분:',
+        jwtToken.substring(0, 30) + '...',
+      ); // 전체 토큰 노출 방지
 
       // 프론트엔드 기본 URL을 ConfigService에서 가져옵니다.
-      const frontendBaseUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+      const frontendBaseUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
 
       // 🔴🔴🔴🔴🔴 수정된 부분: 백틱(`` ` ``)을 사용하여 변수를 올바르게 삽입합니다. 🔴🔴🔴🔴🔴
       // 이 한 줄만 사용하고 기존 주석은 삭제하세요.
       res.redirect(`${frontendBaseUrl}/login-success?token=${jwtToken}`);
-
     } catch (error) {
       // JWT 토큰 생성 또는 리다이렉션 중 오류 발생 시 처리
-      console.error('AuthController: JWT 토큰 생성 또는 리다이렉션 중 오류 발생:', error);
+      console.error(
+        'AuthController: JWT 토큰 생성 또는 리다이렉션 중 오류 발생:',
+        error,
+      );
       console.error('원본 오류 메시지:', error.message);
       console.error('원본 오류 스택:', error.stack);
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
       return res.redirect(`${frontendUrl}/login?error=token_issue`);
     }
   }
