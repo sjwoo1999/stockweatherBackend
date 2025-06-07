@@ -50,7 +50,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           # ⭐⭐⭐ 수정된 부분: 프로젝트 번호와 풀 ID만 포함합니다. ⭐⭐⭐
-          workload_identity_provider: 'projects/1011872961068/locations/global/workloadIdentityPools/github-pool'
+          workload_identity_provider: 'projects/1011872961068/locations/global/workloadIdentityPools/github-pool/providers/github-pool'
           service_account: '${{ env.GCP_SERVICE_ACCOUNT }}'
 
       - name: 'Set up Cloud SDK'
