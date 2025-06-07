@@ -1,4 +1,3 @@
-# .github/workflows/deploy-functions.yml
 name: Deploy REST API to Cloud Functions
 
 on:
@@ -34,11 +33,14 @@ jobs:
       - name: 'Build NestJS application'
         run: npm run build
 
-      # ⭐ GCS 업로드 스텝은 제거합니다. Cloud Functions 2세대가 자동으로 처리합니다.
-
       - name: 'Deploy to Cloud Functions (2nd Gen)'
         run: |
-          sh -c "gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
+          # The '--gen2' flag is correctly placed now.
+          # Ensure your NestJS application listens on process.env.PORT, which Cloud Functions provides.
+          # The 'entry-point' should point to the file that exports your Cloud Function handler.
+          # For a typical NestJS application, this might be 'dist/main.js' or similar, depending on your build output.
+          # Make sure your NestJS app is configured to listen on the PORT environment variable.
+          gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
             --entry-point=app \
             --runtime=nodejs20 \
             --trigger-http \
@@ -51,4 +53,4 @@ jobs:
             --gen2 \
             --source=. \
             --set-env-vars='MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}' \
-            --set-secrets='DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest'"
+            --set-secrets='DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest'
