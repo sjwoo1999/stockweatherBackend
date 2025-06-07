@@ -48,12 +48,14 @@ jobs:
             --service-account ${{ secrets.GCP_SA_EMAIL }}
             --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }}
             --set-env-vars="MODE=WS,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}"
-            --set-secrets="DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
-              DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
-              DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
-              JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,\
-              FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest"
             --port 3000
             --min-instances 1
+          # ⭐⭐⭐ 이 부분이 핵심 수정입니다! secrets 필드를 변경합니다. ⭐⭐⭐
+          secrets: |
+            DB_USERNAME=DB_USERNAME
+            DB_PASSWORD=DB_PASSWORD
+            DB_DATABASE=DB_DATABASE
+            JWT_SECRET=JWT_SECRET
+            FRONTEND_URL=FRONTEND_URL
           env_vars_update_strategy: merge
           secrets_update_strategy: merge
