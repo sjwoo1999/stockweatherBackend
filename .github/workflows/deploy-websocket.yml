@@ -6,9 +6,6 @@ on:
     branches:
       - main # main 브랜치에 푸시될 때 워크플로우 실행
 
-# env 섹션은 이제 사용하지 않거나 최소화합니다.
-# 모든 구성은 secrets에서 가져옵니다.
-
 jobs:
   deploy-websocket:
     runs-on: ubuntu-latest
@@ -22,37 +19,36 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}' # GitHub Secret
-          service_account: '${{ secrets.GCP_SA_EMAIL }}' # GitHub Secret
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          service_account: '${{ secrets.GCP_SA_EMAIL }}'
 
       - name: 'Set up Cloud SDK and Docker auth'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }} # GitHub Secret
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: 'Configure Docker to use the gcloud command'
-        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev # GitHub Secret
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: 'Build Docker image for WebSocket'
-        run: docker build -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} . # GitHub Secret
+        run: docker build -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
-        run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} # GitHub Secret
+        # ⭐⭐⭐ docker push 명령어도 sh -c "..." 로 감싸봅니다. ⭐⭐⭐
+        run: sh -c "docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}"
 
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
-          service: ${{ secrets.GCP_CR_NAME_WEBSOCKET }} # GitHub Secret
-          region: ${{ secrets.GCP_REGION }} # GitHub Secret
-          image: ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} # GitHub Secret
+          service: ${{ secrets.GCP_CR_NAME_WEBSOCKET }}
+          region: ${{ secrets.GCP_REGION }}
+          image: ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
           flags: |
             --allow-unauthenticated
             --timeout 300
-            --service-account ${{ secrets.GCP_SA_EMAIL }} # GitHub Secret
-            --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }} # GitHub Secret
-            # 민감하지 않은 앱 환경 변수는 --set-env-vars로 직접 설정
+            --service-account ${{ secrets.GCP_SA_EMAIL }}
+            --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }}
             --set-env-vars="MODE=WS,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}"
-            # 민감한 앱 환경 변수는 --set-secrets로 Secret Manager에서 가져옴
             --set-secrets="DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
               DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
               DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
