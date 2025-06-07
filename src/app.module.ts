@@ -14,7 +14,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module'; // Auth 모듈
 import { StockModule } from './stock/stock.module'; // Stock 모듈
 import { EventsModule } from './events/events.module'; // Events (WebSocket) 모듈
-import { AiAnalysisModule } from './ai-analysis/ai-analysis.module'; // AI Analysis 모듈
+import { AIAnalysisModule } from './ai-analysis/ai-analysis.module'; // AI Analysis 모듈
 import { DisclosureModule } from './disclosure/disclosure.module'; // Disclosure 모듈
 
 @Module({
@@ -100,7 +100,7 @@ import { DisclosureModule } from './disclosure/disclosure.module'; // Disclosure
     // REST API 모드에서만 필요한 모듈 (대부분의 컨트롤러)
     ...(process.env.MODE === 'REST' ? [
       StockModule,
-      AiAnalysisModule,
+      AIAnalysisModule,
       DisclosureModule,
       // 여기에 REST API와 관련된 다른 모듈들을 추가합니다.
     ] : []),
