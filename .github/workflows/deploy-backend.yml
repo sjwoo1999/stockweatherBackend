@@ -99,12 +99,10 @@ jobs:
       - name: 'Build NestJS application'
         run: npm run build
 
-      # 수정할 부분만 보여줄게
-
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
-            --entry-point=stockweatherRestApi \  # ✅ functions.http()에서 정의한 이름
+            --entry-point=stockweatherRestApi \
             --runtime=nodejs20 \
             --trigger-http \
             --allow-unauthenticated \
@@ -114,7 +112,7 @@ jobs:
             --memory=256MB \
             --timeout=300s \
             --gen2 \
-            --source=. \  # ✅ 반드시 . (root) — package.json 포함해야 정상 배포됨!
+            --source=. \
             --set-env-vars="\
                 NODE_ENV=production,\
                 MODE=REST,\
