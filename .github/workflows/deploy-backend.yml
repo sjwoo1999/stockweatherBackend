@@ -27,7 +27,7 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: 'Configure Docker to use the gcloud command'
+      - name: 'Configure Docker to use gcloud'
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: 'Build Docker image for WebSocket'
@@ -70,12 +70,12 @@ jobs:
             --use-http2 \
             --quiet
 
-  deploy-rest:
+  deploy-rest-api:
     name: Deploy REST API (Cloud Run)
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-    needs: deploy-websocket  # WebSocket 먼저 성공해야 REST 진행
+    needs: deploy-websocket  # WebSocket 성공 후 실행
 
     steps:
       - name: Checkout repository
@@ -92,7 +92,7 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: 'Configure Docker to use the gcloud command'
+      - name: 'Configure Docker to use gcloud'
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: 'Build Docker image for REST API'
