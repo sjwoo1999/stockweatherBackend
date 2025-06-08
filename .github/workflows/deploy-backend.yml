@@ -104,7 +104,7 @@ jobs:
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
-            --entry-point=stockweatherRestApi \  # ✅ 여기 수정
+            --entry-point=stockweatherRestApi \
             --runtime=nodejs20 \
             --trigger-http \
             --allow-unauthenticated \
