@@ -103,5 +103,5 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
-  "main": "dist/bootstrap-rest.js"
+  "main": "dist/main.js"
 }

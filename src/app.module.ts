@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { User } from './users/user.entity';
-
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { StockModule } from './stock/stock.module';
@@ -13,14 +11,15 @@ import { DisclosureModule } from './disclosure/disclosure.module';
 
 @Module({
   imports: [
-    // ✅ ConfigModule 설정 → Cloud Run / Cloud Functions 공통으로 안정 동작
     ConfigModule.forRoot({
       isGlobal: true,
-      ignoreEnvFile: false, // 반드시 false → process.env + .env 파일 모두 읽힘
-      envFilePath: process.env.ENV_FILE || '.env.production', // 유연하게 적용 가능 (디폴트는 .env.production)
+      ignoreEnvFile: process.env.NODE_ENV === 'production', // Cloud Functions 용
+      envFilePath:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : '.env.development',
     }),
 
-    // ✅ DB 설정
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -60,24 +59,15 @@ import { DisclosureModule } from './disclosure/disclosure.module';
       inject: [ConfigService],
     }),
 
-    // ✅ 공통 모듈
     UsersModule,
     AuthModule,
 
-    // ✅ REST 모드 전용 모듈
     ...(process.env.MODE === 'REST'
-      ? [
-          StockModule,
-          AIAnalysisModule,
-          DisclosureModule,
-        ]
+      ? [StockModule, AIAnalysisModule, DisclosureModule]
       : []),
 
-    // ✅ WebSocket 모드 전용 모듈
     ...(process.env.MODE === 'WS'
-      ? [
-          EventsModule,
-        ]
+      ? [EventsModule]
       : []),
   ],
   controllers: [],
