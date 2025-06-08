@@ -3,7 +3,7 @@ name: Deploy REST API to Cloud Functions
 on:
   push:
     branches:
-      - main # main 브랜치에 푸시될 때 워크플로우 실행
+      - main
 
 jobs:
   deploy-functions:
@@ -44,19 +44,19 @@ jobs:
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --memory=256MB \
-            --timeout=600s \
+            --timeout=300s \
             --gen2 \
             --source=. \
             --set-env-vars="MODE=REST,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
             --set-secrets="\
-            DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
-            DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
-            DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
-            JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,\
-            CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,\
-            DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,\
-            KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,\
-            KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,\
-            KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,\
-            FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest" \
-                        --quiet
+                DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
+                DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
+                DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
+                JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,\
+                CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,\
+                DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,\
+                KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,\
+                KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,\
+                KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,\
+                FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest" \
+                            --quiet
