@@ -26,21 +26,26 @@ import { DisclosureModule } from './disclosure/disclosure.module';
         const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
         const sslEnabled = dbSslEnabledConfig === 'true';
 
+        const dbHost = configService.get<string>('DB_HOST');
+        const dbPort = configService.get<number>('DB_PORT');
+        const dbUsername = configService.get<string>('DB_USERNAME');
+        const dbDatabase = configService.get<string>('DB_DATABASE');
+
         console.log('--- TypeOrmModule.forRootAsync DB Config ---');
-        console.log('DB_HOST:', configService.get<string>('DB_HOST'));
-        console.log('DB_PORT:', configService.get<number>('DB_PORT'));
-        console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
-        console.log('DB_DATABASE:', configService.get<string>('DB_DATABASE'));
+        console.log('DB_HOST:', dbHost);
+        console.log('DB_PORT:', dbPort);
+        console.log('DB_USERNAME:', dbUsername);
+        console.log('DB_DATABASE:', dbDatabase);
         console.log('DB_SSL_ENABLED:', sslEnabled);
         console.log('-------------------------------------------');
 
         return {
           type: 'postgres',
-          host: configService.get<string>('DB_HOST'),
-          port: configService.get<number>('DB_PORT'),
-          username: configService.get<string>('DB_USERNAME'),
+          host: dbHost,
+          port: dbPort,
+          username: dbUsername,
           password: configService.get<string>('DB_PASSWORD'),
-          database: configService.get<string>('DB_DATABASE'),
+          database: dbDatabase,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
           logging: configService.get<boolean>('DB_LOGGING', false),
@@ -62,11 +67,12 @@ import { DisclosureModule } from './disclosure/disclosure.module';
     UsersModule,
     AuthModule,
 
-    ...(process.env.MODE === 'REST'
+    // ✅ MODE 공백 제거 후 안전하게 비교
+    ...(process.env.MODE?.trim() === 'REST'
       ? [StockModule, AIAnalysisModule, DisclosureModule]
       : []),
 
-    ...(process.env.MODE === 'WS'
+    ...(process.env.MODE?.trim() === 'WS'
       ? [EventsModule]
       : []),
   ],
