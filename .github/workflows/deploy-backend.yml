@@ -46,6 +46,7 @@ jobs:
             --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
             --set-env-vars="\
+              NODE_ENV=production,\
               MODE=WS,\
               DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
               DB_PORT=5432,\
@@ -74,8 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: write # Workload Identity Federation 사용 시 필요
-    needs: deploy-websocket # 🚀 반드시 WebSocket 배포 완료 후 실행
+      id-token: write
+    needs: deploy-websocket
 
     steps:
       - name: Checkout repository
@@ -101,7 +102,7 @@ jobs:
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
-            --entry-point=app \
+            --entry-point=default \
             --runtime=nodejs20 \
             --trigger-http \
             --allow-unauthenticated \
@@ -113,6 +114,7 @@ jobs:
             --gen2 \
             --source=. \
             --set-env-vars="\
+                NODE_ENV=production,\
                 MODE=REST,\
                 DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
                 DB_PORT=5432,\

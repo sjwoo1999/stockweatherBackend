@@ -87,18 +87,18 @@ async function bootstrap() {
       });
     });
 
-    // WebSocket 서버 listen → 여기 initializeDatabase() 제거!
+    // WebSocket 서버 listen
     httpServer.listen(port, () => {
       logger.log(`🚀 WebSocket server is running on port ${port}`);
-      // WebSocket 모드에서는 TypeORM이 자동 초기화되므로 따로 호출 X
+      // WebSocket 모드에서는 TypeORM 자동 초기화 (initializeDatabase 필요 없음)
     });
 
   } else {
-    // 🚀 REST API 서버 listen
+    // REST API 서버 listen
     await app.listen(port);
     logger.log(`🚀 REST API server is running on port ${port}`);
 
-    // REST 모드에서는 initializeDatabase 호출 (정상)
+    // REST 모드에서는 initializeDatabase 호출
     await initializeDatabase(app, logger);
   }
 }
@@ -133,4 +133,5 @@ async function initializeDatabase(app, logger: Logger) {
 
 bootstrap();
 
-export const app = expressApp;
+// Cloud Functions entry-point export (default export)
+export default expressApp;
