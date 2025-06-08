@@ -7,7 +7,9 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
+import { DataSourceOptions } from 'typeorm';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
@@ -27,6 +29,8 @@ async function bootstrap() {
     AppModule,
     new ExpressAdapter(expressApp),
   );
+
+  const configService = app.get(ConfigService);
 
   // Global Pipes 설정
   app.useGlobalPipes(
@@ -99,34 +103,65 @@ async function bootstrap() {
     logger.log(`🚀 REST API server is running on port ${port}`);
 
     // REST 모드에서는 initializeDatabase 호출
-    await initializeDatabase(app, logger);
+    await initializeDatabase(app, configService, logger);
   }
 }
 
-async function initializeDatabase(app, logger: Logger) {
-  try {
-    const dataSource = app.get(DataSource);
-    let retries = 50;
-    const delay = 5000;
-    while (retries > 0) {
-      try {
-        await dataSource.initialize();
-        logger.log('✅ Database connected successfully after app.listen!');
-        break;
-      } catch (error) {
-        retries--;
-        logger.warn(`❌ Failed to connect to DB. Retrying in ${delay / 1000}s... Retries left: ${retries}. Error: ${error.message}`);
-        if (retries > 0) {
-          await new Promise((resolve) => setTimeout(resolve, delay));
+async function initializeDatabase(app, configService: ConfigService, logger: Logger) {
+  const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
+  const sslEnabled = dbSslEnabledConfig === 'true';
+
+  const dataSourceOptions: DataSourceOptions = {
+    type: 'postgres',
+    host: configService.get<string>('DB_HOST'),
+    port: configService.get<number>('DB_PORT'),
+    username: configService.get<string>('DB_USERNAME'),
+    password: configService.get<string>('DB_PASSWORD'),
+    database: configService.get<string>('DB_DATABASE'),
+    entities: [__dirname + '/**/*.entity{.ts,.js}'],
+    synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+    logging: configService.get<boolean>('DB_LOGGING', false),
+    ssl: sslEnabled
+      ? {
+          rejectUnauthorized: false,
         }
+      : false,
+    extra: {
+      socketPath: configService.get<string>('CLOUD_SQL_CONNECTION_NAME')
+        ? `/cloudsql/${configService.get<string>('CLOUD_SQL_CONNECTION_NAME')}`
+        : undefined,
+    },
+  };
+
+  console.log('--- DataSourceOptions (initializeDatabase) ---');
+  console.log('DB_HOST:', dataSourceOptions.host);
+  console.log('DB_PORT:', dataSourceOptions.port);
+  console.log('DB_USERNAME:', dataSourceOptions.username);
+  console.log('DB_DATABASE:', dataSourceOptions.database);
+  console.log('DB_SSL_ENABLED:', sslEnabled);
+  console.log('---------------------------------------------');
+
+  const dataSource = new DataSource(dataSourceOptions);
+
+  let retries = 50;
+  const delay = 5000;
+
+  while (retries > 0) {
+    try {
+      await dataSource.initialize();
+      logger.log('✅ Database connected successfully after app.listen!');
+      break;
+    } catch (error) {
+      retries--;
+      logger.warn(`❌ Failed to connect to DB. Retrying in ${delay / 1000}s... Retries left: ${retries}. Error: ${error.message}`);
+      if (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
-    if (retries === 0) {
-      logger.error('❌ Failed to connect to the database after multiple retries. Exiting.');
-      process.exit(1);
-    }
-  } catch (err) {
-    logger.error('❌ Unexpected error during DB connection:', err);
+  }
+
+  if (retries === 0) {
+    logger.error('❌ Failed to connect to the database after multiple retries. Exiting.');
     process.exit(1);
   }
 }
