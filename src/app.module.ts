@@ -1,12 +1,9 @@
-// stockweather-backend/src/app.module.ts
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { User } from './users/user.entity';
 
-// 애플리케이션의 다른 모듈들을 임포트합니다.
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { StockModule } from './stock/stock.module';
@@ -16,15 +13,14 @@ import { DisclosureModule } from './disclosure/disclosure.module';
 
 @Module({
   imports: [
+    // ✅ ConfigModule 설정 → Cloud Run / Cloud Functions 공통으로 안정 동작
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath:
-        process.env.NODE_ENV === 'production'
-          ? '.env.production'
-          : '.env.development',
-      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      ignoreEnvFile: false, // 반드시 false → process.env + .env 파일 모두 읽힘
+      envFilePath: process.env.ENV_FILE || '.env.production', // 유연하게 적용 가능 (디폴트는 .env.production)
     }),
 
+    // ✅ DB 설정
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -62,14 +58,13 @@ import { DisclosureModule } from './disclosure/disclosure.module';
         };
       },
       inject: [ConfigService],
-      // 🚨 dataSourceFactory 제거됨 → main.ts 에서 수동 초기화
     }),
 
-    // 공통 모듈
+    // ✅ 공통 모듈
     UsersModule,
     AuthModule,
 
-    // REST 모드 전용 모듈
+    // ✅ REST 모드 전용 모듈
     ...(process.env.MODE === 'REST'
       ? [
           StockModule,
@@ -78,7 +73,7 @@ import { DisclosureModule } from './disclosure/disclosure.module';
         ]
       : []),
 
-    // WebSocket 모드 전용 모듈
+    // ✅ WebSocket 모드 전용 모듈
     ...(process.env.MODE === 'WS'
       ? [
           EventsModule,
