@@ -46,9 +46,15 @@ jobs:
             --timeout 300
             --service-account ${{ secrets.GCP_SA_EMAIL }}
             --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }}
-            --set-env-vars=MODE=WS,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}
+            --set-env-vars=MODE=WS,DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}
             --port 8080
             --min-instances 1
-            --set-secrets=DB_USERNAME=DB_USERNAME:latest,DB_PASSWORD=DB_PASSWORD:latest,DB_DATABASE=DB_DATABASE:latest,JWT_SECRET=JWT_SECRET:latest,FRONTEND_URL=FRONTEND_URL:latest
+            --use-http2
+          secrets: |
+            DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest
+            DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest
+            DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest
+            JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest
+            FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest
           env_vars_update_strategy: merge
           secrets_update_strategy: merge
