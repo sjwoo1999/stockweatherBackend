@@ -1,3 +1,5 @@
+// src/bootstrap-rest.ts
+
 import { createApp } from './bootstrap-app';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { initializeDatabase } from './utils/database';
@@ -6,7 +8,7 @@ import { Logger } from '@nestjs/common';
 
 const expressApp = express();
 
-async function bootstrap() {
+(async () => {
   const logger = new Logger('Bootstrap');
   const app = await createApp(expressApp);
 
@@ -20,12 +22,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  await app.listen(process.env.PORT || 8080);
-  logger.log(`🚀 REST API server running on port ${process.env.PORT || 8080}`);
+  logger.log(`🚀 REST API for Cloud Functions ready`);
 
   await initializeDatabase(app, logger);
-}
 
-bootstrap();
+  // ❌ listen 제거 → Cloud Functions 에서는 listen 금지
+})();
 
-export default expressApp; // Cloud Functions entry-point
+export default expressApp;  // Cloud Functions entry-point
