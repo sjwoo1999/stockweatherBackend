@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
-    "start:rest": "node dist/bootstrap-rest.js",
+    "start:rest": "functions-framework --target=stockweatherRestApi",
     "start:ws": "node dist/bootstrap-ws.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",

@@ -104,7 +104,7 @@ jobs:
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
-            --entry-point=stockweatherRestApi \
+            --entry-point=stockweatherRestApi \  # ✅ functions.http()에서 정의한 이름
             --runtime=nodejs20 \
             --trigger-http \
             --allow-unauthenticated \
@@ -114,7 +114,7 @@ jobs:
             --memory=256MB \
             --timeout=300s \
             --gen2 \
-            --source=dist \
+            --source=. \  # ✅ 반드시 . (root) — package.json 포함해야 정상 배포됨!
             --set-env-vars="\
                 NODE_ENV=production,\
                 MODE=REST,\
