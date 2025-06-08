@@ -47,9 +47,8 @@ jobs:
             --service-account ${{ secrets.GCP_SA_EMAIL }}
             --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }}
             --set-env-vars="MODE=WS,DB_HOST=127.0.0.1,DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}"
-            --port 3000
+            --port 8080 # ⭐ 이 부분을 3000 -> 8080 으로 변경
             --min-instances 1
-          # Corrected secrets format. It should be KEY_IN_CONTAINER=projects/<project-id>/secrets/<secret-name>:latest
           secrets: |
             DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest
             DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest
