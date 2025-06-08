@@ -2,7 +2,6 @@
 
 import { createApp } from './bootstrap-app';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { initializeDatabase } from './utils/database';
 import * as express from 'express';
 import { Logger } from '@nestjs/common';
 import * as functions from '@google-cloud/functions-framework'; // ✅ 추가
@@ -25,9 +24,8 @@ const expressApp = express();
 
   logger.log(`🚀 REST API for Cloud Functions ready`);
 
-  await initializeDatabase(app, logger);
-
-  // ❌ listen 제거 (Cloud Functions는 listen 호출 금지)
+  // ✅ initializeDatabase 제거 (중복 방지)
+  // await initializeDatabase(app, logger);
 })();
 
 // 👉 functions-framework 등록 (함수명 = stockweatherRestApi)
