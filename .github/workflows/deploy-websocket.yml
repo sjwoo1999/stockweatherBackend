@@ -3,7 +3,7 @@ name: Deploy WebSocket to Cloud Run
 on:
   push:
     branches:
-      - main # main 브랜치에 푸시될 때 워크플로우 실행
+      - main
 
 jobs:
   deploy-websocket:
@@ -50,10 +50,10 @@ jobs:
             --port 8080
             --min-instances 1
           secrets: |
-            DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest
-            DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest
-            DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest
-            JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest
-            FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest
+            DB_USERNAME=DB_USERNAME:latest
+            DB_PASSWORD=DB_PASSWORD:latest
+            DB_DATABASE=DB_DATABASE:latest
+            JWT_SECRET=JWT_SECRET:latest
+            FRONTEND_URL=FRONTEND_URL:latest
           env_vars_update_strategy: merge
           secrets_update_strategy: merge
