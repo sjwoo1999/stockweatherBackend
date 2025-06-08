@@ -2,7 +2,6 @@
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as cookieParser from 'cookie-parser';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
@@ -88,20 +87,18 @@ async function bootstrap() {
       });
     });
 
-    // 🚨 WebSocket 서버 listen
-    httpServer.listen(port, async () => {
+    // WebSocket 서버 listen → 여기 initializeDatabase() 제거!
+    httpServer.listen(port, () => {
       logger.log(`🚀 WebSocket server is running on port ${port}`);
-
-      // DB 연결 수행 (listen 후에)
-      await initializeDatabase(app, logger);
+      // WebSocket 모드에서는 TypeORM이 자동 초기화되므로 따로 호출 X
     });
 
   } else {
-    // 🚨 REST API 서버 listen
+    // 🚀 REST API 서버 listen
     await app.listen(port);
     logger.log(`🚀 REST API server is running on port ${port}`);
 
-    // DB 연결 수행 (listen 후에)
+    // REST 모드에서는 initializeDatabase 호출 (정상)
     await initializeDatabase(app, logger);
   }
 }
