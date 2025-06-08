@@ -1,9 +1,10 @@
-// src/bootstrap-rest.ts
+// src/bootstrap-rest-function.ts
 
 import { createApp } from './bootstrap-app';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import { Logger } from '@nestjs/common';
+import * as functions from '@google-cloud/functions-framework';
 
 const expressApp = express();
 
@@ -21,10 +22,8 @@ const expressApp = express();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  logger.log(`🚀 REST API for Cloud Run ready`);
-
-  const port = process.env.PORT || 8080;
-  expressApp.listen(port, () => {
-    logger.log(`✅ Listening on port ${port}`);
-  });
+  logger.log(`🚀 REST API for Cloud Functions ready`);
 })();
+
+// 👉 functions-framework 등록 (함수명 = stockweatherRestApi)
+functions.http('stockweatherRestApi', expressApp);
