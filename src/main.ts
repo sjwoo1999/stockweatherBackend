@@ -9,6 +9,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+// Cloud Functions용으로 Express 앱을 export하기 위해 추가
 const expressApp = express();
 
 async function bootstrap() {
@@ -58,17 +59,17 @@ async function bootstrap() {
     logger.log('Swagger UI enabled at /api-docs');
   }
 
-  // 개선: Cloud Functions 용일 때 PORT 로깅 추가 (디버깅 편리)
-  if (process.env.MODE === 'REST') {
-    await app.init();
-    logger.log(
-      `NestJS application initialized for Cloud Functions (REST API mode). PORT=${port}`,
-    );
-  } else {
+  /**
+   * 🚨 수정된 부분: Cloud Functions 2nd Gen (REST) 모드에서도 반드시 app.listen(port) 호출 필요
+   * → Cloud Functions 2nd Gen 은 Cloud Run 기반으로 동작하며 반드시 PORT 리스닝 필요
+   */
+  if (process.env.MODE === 'REST' || process.env.MODE === 'WS') {
     await app.listen(port);
-    logger.log(
-      `Application is running on: ${await app.getUrl()} (WebSocket/Full Service mode).`,
-    );
+    logger.log(`Application is running in ${process.env.MODE} mode on PORT ${port}`);
+  } else {
+    // fallback: 혹시 다른 MODE가 들어올 경우 대비
+    await app.listen(port);
+    logger.log(`Application is running on PORT ${port} (default fallback)`);
   }
 }
 
