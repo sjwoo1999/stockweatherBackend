@@ -114,11 +114,11 @@ jobs:
             --source=. \
             --set-env-vars="\
                 MODE=REST,\
-                DB_HOST=127.0.0.1,\
+                DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
                 DB_PORT=5432,\
                 DB_SYNCHRONIZE=false,\
                 DB_LOGGING=false,\
-                DB_SSL_ENABLED=true,\
+                DB_SSL_ENABLED=false,\
                 CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
             --set-secrets="\
                 DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
