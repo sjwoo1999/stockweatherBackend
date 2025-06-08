@@ -70,6 +70,21 @@ jobs:
             --use-http2 \
             --quiet
 
+      - name: 'Move traffic to latest revision (WebSocket)'
+        run: |
+          gcloud run services update-traffic ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
+            --to-latest \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed
+
+      - name: 'Clean up old revisions (WebSocket)'
+        run: |
+          OLD_REVISIONS=$(gcloud run revisions list --service=${{ secrets.GCP_CR_NAME_WEBSOCKET }} --region=${{ secrets.GCP_REGION }} --platform=managed --filter="traffic:0" --format="value(METADATA.name)")
+          for REV in $OLD_REVISIONS; do
+            echo "Deleting old revision: $REV"
+            gcloud run revisions delete $REV --region=${{ secrets.GCP_REGION }} --platform=managed --quiet
+          done
+
   deploy-rest-api:
     name: Deploy REST API (Cloud Run)
     runs-on: ubuntu-latest
@@ -134,4 +149,18 @@ jobs:
             --min-instances=0 \
             --use-http2 \
             --quiet
-      
+
+      - name: 'Move traffic to latest revision (REST API)'
+        run: |
+          gcloud run services update-traffic ${{ secrets.GCP_CR_NAME_REST_API }} \
+            --to-latest \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed
+
+      - name: 'Clean up old revisions (REST API)'
+        run: |
+          OLD_REVISIONS=$(gcloud run revisions list --service=${{ secrets.GCP_CR_NAME_REST_API }} --region=${{ secrets.GCP_REGION }} --platform=managed --filter="traffic:0" --format="value(METADATA.name)")
+          for REV in $OLD_REVISIONS; do
+            echo "Deleting old revision: $REV"
+            gcloud run revisions delete $REV --region=${{ secrets.GCP_REGION }} --platform=managed --quiet
+          done
