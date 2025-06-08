@@ -1,4 +1,4 @@
-name: Deploy WebSocket to Cloud Run (with secrets update)
+name: Deploy WebSocket to Cloud Run (CLI 버전)
 
 on:
   push:
@@ -35,29 +35,28 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
 
-      - name: 'Deploy to Cloud Run (without secrets first)'
+      - name: 'Deploy to Cloud Run (CLI 방식)'
         run: |
-          gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
-            --image=${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --allow-unauthenticated \
-            --timeout=300 \
-            --service-account=${{ secrets.GCP_SA_EMAIL }} \
-            --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-            --set-env-vars="MODE=WS,DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
-            --port=8080 \
-            --min-instances=1 \
-            --use-http2 \
-            --quiet
-
-      - name: 'Update secrets to Cloud Run service'
-        run: |
-          gcloud run services update ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --update-secrets="\
-              DB_USERNAME=latest,\
-              DB_PASSWORD=latest,\
-              DB_DATABASE=latest,\
-              JWT_SECRET=latest,\
-              FRONTEND_URL=latest" \
-            --quiet
+            gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
+              --image=${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} \
+              --region=${{ secrets.GCP_REGION }} \
+              --allow-unauthenticated \
+              --timeout=300 \
+              --service-account=${{ secrets.GCP_SA_EMAIL }} \
+              --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
+              --set-env-vars="MODE=WS,DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_PORT=5432,DB_SYNCHRONIZE=false,DB_LOGGING=false,DB_SSL_ENABLED=true,CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
+              --update-secrets="\
+                DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
+                DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
+                DB_DATABASE=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_DATABASE:latest,\
+                JWT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/JWT_SECRET:latest,\
+                FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest,\
+                CHATGPT_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/CHATGPT_API_KEY:latest,\
+                DART_OPENAPI_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DART_OPENAPI_KEY:latest,\
+                KAKAO_CLIENT_ID=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_ID:latest,\
+                KAKAO_CLIENT_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CLIENT_SECRET:latest,\
+                KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest" \
+              --port=8080 \
+              --min-instances=1 \
+              --use-http2 \
+              --quiet
