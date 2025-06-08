@@ -99,10 +99,12 @@ jobs:
       - name: 'Build NestJS application'
         run: npm run build
 
+      # 수정할 부분만 보여줄게
+
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
-            --entry-point=default \
+            --entry-point=stockweatherRestApi \  # ✅ 여기 수정
             --runtime=nodejs20 \
             --trigger-http \
             --allow-unauthenticated \

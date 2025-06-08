@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { initializeDatabase } from './utils/database';
 import * as express from 'express';
 import { Logger } from '@nestjs/common';
+import * as functions from '@google-cloud/functions-framework';  // ✅ 추가
 
 const expressApp = express();
 
@@ -26,7 +27,8 @@ const expressApp = express();
 
   await initializeDatabase(app, logger);
 
-  // ❌ listen 제거 → Cloud Functions 에서는 listen 금지
+  // ❌ listen 제거 (Cloud Functions는 listen 호출 금지)
 })();
 
-export default expressApp;  // Cloud Functions entry-point
+// 👉 functions-framework 등록 (함수명 = stockweatherRestApi)
+functions.http('stockweatherRestApi', expressApp);
