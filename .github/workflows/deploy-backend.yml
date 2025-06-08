@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy-websocket:
-    name: Deploy WebSocket to Cloud Run
+    name: Deploy WebSocket (Cloud Run)
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -71,7 +71,7 @@ jobs:
             --quiet
 
   deploy-functions:
-    name: Deploy REST API to Cloud Functions
+    name: Deploy REST API (Cloud Functions)
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'

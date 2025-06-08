@@ -1,18 +1,15 @@
-// src/bootstrap-rest.ts
-
 import { createApp } from './bootstrap-app';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { initializeDatabase } from './utils/database';
 import * as express from 'express';
-import { Logger } from '@nestjs/common'; // 추가
+import { Logger } from '@nestjs/common';
 
 const expressApp = express();
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap'); // 추가
+  const logger = new Logger('Bootstrap');
   const app = await createApp(expressApp);
 
-  // Swagger 설정
   const config = new DocumentBuilder()
     .setTitle('StockWeather Backend API')
     .setDescription('The StockWeather Backend API description')
@@ -26,8 +23,7 @@ async function bootstrap() {
   await app.listen(process.env.PORT || 8080);
   logger.log(`🚀 REST API server running on port ${process.env.PORT || 8080}`);
 
-  // DB Init
-  await initializeDatabase(app, logger); // logger 추가
+  await initializeDatabase(app, logger);
 }
 
 bootstrap();
