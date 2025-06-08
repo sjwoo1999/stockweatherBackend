@@ -112,7 +112,7 @@ jobs:
             --memory=256MB \
             --timeout=300s \
             --gen2 \
-            --source=dist \
+            --source=. \
             --set-env-vars="\
                 NODE_ENV=production,\
                 MODE=REST,\
