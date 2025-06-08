@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { initializeDatabase } from './utils/database';
 import * as express from 'express';
 import { Logger } from '@nestjs/common';
-import * as functions from '@google-cloud/functions-framework';  // ✅ 추가
+import * as functions from '@google-cloud/functions-framework'; // ✅ 추가
 
 const expressApp = express();
 

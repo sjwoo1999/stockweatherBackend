@@ -8,7 +8,10 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 
 export async function createApp(expressApp = express()) {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressApp),
+  );
 
   // Global Pipes 설정
   app.useGlobalPipes(

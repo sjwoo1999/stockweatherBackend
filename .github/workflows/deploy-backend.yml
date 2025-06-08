@@ -70,35 +70,6 @@ jobs:
             --use-http2 \
             --quiet
 
-  deploy-functions:
-    name: Deploy REST API (Cloud Functions)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: write
-    needs: deploy-websocket
-
-    steps:
-      - name: Checkout repository
-        uses: 'actions/checkout@v4'
-
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-          service_account: '${{ secrets.GCP_SA_EMAIL }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: 'Install dependencies'
-        run: npm ci
-
-      - name: 'Build NestJS application'
-        run: npm run build
-
       - name: 'Deploy REST API to Cloud Functions'
         run: |
           gcloud functions deploy ${{ secrets.GCP_CF_NAME_REST_API }} \
@@ -112,7 +83,7 @@ jobs:
             --memory=256MB \
             --timeout=300s \
             --gen2 \
-            --source=. \
+            --source=. \   # <-- 반드시 root source 로 해야 함 (. 이 핵심)
             --set-env-vars="\
                 NODE_ENV=production,\
                 MODE=REST,\
@@ -121,7 +92,7 @@ jobs:
                 DB_SYNCHRONIZE=false,\
                 DB_LOGGING=false,\
                 DB_SSL_ENABLED=false,\
-                CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
+               CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }}" \
             --set-secrets="\
                 DB_USERNAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_USERNAME:latest,\
                 DB_PASSWORD=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/DB_PASSWORD:latest,\
@@ -134,3 +105,4 @@ jobs:
                 KAKAO_CALLBACK_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/KAKAO_CALLBACK_URL:latest,\
                 FRONTEND_URL=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/FRONTEND_URL:latest" \
             --quiet
+          

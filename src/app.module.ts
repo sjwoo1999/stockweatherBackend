@@ -15,15 +15,16 @@ import { DisclosureModule } from './disclosure/disclosure.module';
       isGlobal: true,
       ignoreEnvFile: process.env.NODE_ENV === 'production', // Cloud Functions 용
       envFilePath:
-        process.env.NODE_ENV === 'production'
-          ? undefined
-          : '.env.development',
+        process.env.NODE_ENV === 'production' ? undefined : '.env.development',
     }),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const dbSslEnabledConfig = configService.get<string>('DB_SSL_ENABLED', 'false');
+        const dbSslEnabledConfig = configService.get<string>(
+          'DB_SSL_ENABLED',
+          'false',
+        );
         const sslEnabled = dbSslEnabledConfig === 'true';
 
         const dbHost = configService.get<string>('DB_HOST');
@@ -72,9 +73,7 @@ import { DisclosureModule } from './disclosure/disclosure.module';
       ? [StockModule, AIAnalysisModule, DisclosureModule]
       : []),
 
-    ...(process.env.MODE?.trim() === 'WS'
-      ? [EventsModule]
-      : []),
+    ...(process.env.MODE?.trim() === 'WS' ? [EventsModule] : []),
   ],
   controllers: [],
   providers: [],
