@@ -1,12 +1,23 @@
-import { createApp } from './bootstrap-app';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 async function bootstrap() {
-  const app = await createApp();
+  const app = await NestFactory.create(AppModule);
+
+  // ✅ CORS 설정
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    credentials: true,
+  });
+
+  await app.init();
+
   const port = process.env.PORT || 8080;
 
   const httpServer = createServer(app.getHttpAdapter().getInstance());
+
   const io = new Server(httpServer, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:3001',
