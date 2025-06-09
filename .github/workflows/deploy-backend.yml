@@ -36,6 +36,14 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
 
+      # ✅ Remove old env var (FRONTEND_URL)
+      - name: 'Remove old env var (WebSocket)'
+        run: |
+          gcloud run services update ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed \
+            --remove-env-vars=FRONTEND_URL
+
       - name: 'Deploy WebSocket to Cloud Run'
         run: |
           gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
@@ -54,7 +62,7 @@ jobs:
               DB_LOGGING=false,\
               DB_SSL_ENABLED=false,\
               CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              FRONTEND_URL=https://stockweather-frontend.vercel.app"
+              FRONTEND_URL=https://stockweather-frontend.vercel.app" \
             --update-secrets="\
               DB_USERNAME=DB_USERNAME:latest,\
               DB_PASSWORD=DB_PASSWORD:latest,\
@@ -116,6 +124,14 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }}
 
+      # ✅ Remove old env var (REST API)
+      - name: 'Remove old env var (REST API)'
+        run: |
+          gcloud run services update ${{ secrets.GCP_CR_NAME_REST_API }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --platform=managed \
+            --remove-env-vars=FRONTEND_URL
+
       - name: 'Deploy REST API to Cloud Run'
         run: |
           gcloud run deploy ${{ secrets.GCP_CR_NAME_REST_API }} \
@@ -134,7 +150,7 @@ jobs:
               DB_LOGGING=false,\
               DB_SSL_ENABLED=false,\
               CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              FRONTEND_URL=https://stockweather-frontend.vercel.app"
+              FRONTEND_URL=https://stockweather-frontend.vercel.app" \
             --update-secrets="\
               DB_USERNAME=DB_USERNAME:latest,\
               DB_PASSWORD=DB_PASSWORD:latest,\
