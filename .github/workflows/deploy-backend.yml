@@ -131,6 +131,12 @@ jobs:
             --platform=managed \
             --remove-env-vars=FRONTEND_URL || true
 
+      - name: 'Ensure no Cloud Functions service (REST API)'
+        run: |
+          gcloud functions delete ${{ secrets.GCP_CR_NAME_REST_API }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --gen2 --quiet || true
+
       - name: 'Deploy REST API to Cloud Run'
         run: |
           gcloud run deploy ${{ secrets.GCP_CR_NAME_REST_API }} \
