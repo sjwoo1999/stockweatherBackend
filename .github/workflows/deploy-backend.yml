@@ -54,7 +54,7 @@ jobs:
               DB_LOGGING=false,\
               DB_SSL_ENABLED=false,\
               CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              FRONTEND_URL=https://stockweather-frontend.vercel.app" \
+              FRONTEND_URL=https://stockweather-frontend.vercel.app"
             --update-secrets="\
               DB_USERNAME=DB_USERNAME:latest,\
               DB_PASSWORD=DB_PASSWORD:latest,\
@@ -134,7 +134,7 @@ jobs:
               DB_LOGGING=false,\
               DB_SSL_ENABLED=false,\
               CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              FRONTEND_URL=https://stockweather-frontend.vercel.app" \
+              FRONTEND_URL=https://stockweather-frontend.vercel.app"
             --update-secrets="\
               DB_USERNAME=DB_USERNAME:latest,\
               DB_PASSWORD=DB_PASSWORD:latest,\
