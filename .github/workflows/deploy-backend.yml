@@ -32,6 +32,9 @@ jobs:
       - name: 'Configure Docker to use gcloud'
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
+      - name: 'Build project (WebSocket)'
+        run: npm run build:ws
+
       - name: 'Build Docker image for WebSocket'
         run: docker build --build-arg ENTRY_FILE=main-ws -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
 
@@ -97,6 +100,9 @@ jobs:
       - name: 'Configure Docker to use gcloud'
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
+      - name: 'Build project (REST API)'
+        run: npm run build:rest
+      
       - name: 'Build Docker image for REST API'
         run: docker build --build-arg ENTRY_FILE=main-rest -t ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }} .
 
