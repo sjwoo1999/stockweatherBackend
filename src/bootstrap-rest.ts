@@ -1,15 +1,18 @@
-// src/bootstrap-rest.ts
-
-import { createApp } from './bootstrap-app';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as express from 'express';
 import { Logger } from '@nestjs/common';
-
-const expressApp = express();
 
 (async () => {
   const logger = new Logger('Bootstrap');
-  const app = await createApp(expressApp);
+
+  const app = await NestFactory.create(AppModule);
+
+  // ✅ Nest 자체 CORS 사용
+  app.enableCors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('StockWeather Backend API')
@@ -24,7 +27,7 @@ const expressApp = express();
   logger.log(`🚀 REST API for Cloud Run ready`);
 
   const port = process.env.PORT || 8080;
-  expressApp.listen(port, () => {
-    logger.log(`✅ Listening on port ${port}`);
-  });
+  await app.listen(port);
+
+  logger.log(`✅ Listening on port ${port}`);
 })();
