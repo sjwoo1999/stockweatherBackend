@@ -5,15 +5,6 @@ import { Server } from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // ✅ CORS 설정
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true,
-  });
-
-  await app.init();
-
   const port = process.env.PORT || 8080;
 
   const httpServer = createServer(app.getHttpAdapter().getInstance());
@@ -28,10 +19,12 @@ async function bootstrap() {
 
   io.on('connection', (socket) => {
     console.log(`WebSocket client connected: ${socket.id}`);
+
     socket.on('message', (msg) => {
       console.log(`Received message: ${msg}`);
       socket.emit('message', `Echo: ${msg}`);
     });
+
     socket.on('disconnect', () => {
       console.log(`WebSocket client disconnected: ${socket.id}`);
     });

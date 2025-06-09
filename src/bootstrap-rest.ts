@@ -2,16 +2,24 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
+import * as express from 'express';
+import * as cors from 'cors';
 
 (async () => {
   const logger = new Logger('Bootstrap');
 
-  const app = await NestFactory.create(AppModule);
+  const expressApp = express();
 
-  // ✅ Nest 자체 CORS 사용
-  app.enableCors({
+  // ✅ Express CORS middleware (반드시 가장 먼저)
+  expressApp.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
+  }));
+
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
+    cors: false, // Nest 내부 CORS disable
+    logger: console,
   });
 
   const config = new DocumentBuilder()

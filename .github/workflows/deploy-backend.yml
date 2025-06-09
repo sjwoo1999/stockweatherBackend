@@ -45,41 +45,38 @@ jobs:
             --platform=managed \
             --remove-env-vars=FRONTEND_URL || true
 
-      - name: 'Deploy WebSocket to Cloud Run'
-        run: |
-          gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
-            --image=${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --allow-unauthenticated \
-            --timeout=300 \
-            --service-account=${{ secrets.GCP_SA_EMAIL }} \
-            --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-            --memory=512Mi \
-            --ingress=all \
-            --set-env-vars="\
-              NODE_ENV=production,\
-              MODE=WS,\
-              DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              DB_PORT=5432,\
-              DB_SYNCHRONIZE=false,\
-              DB_LOGGING=false,\
-              DB_SSL_ENABLED=false,\
-              CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
-              FRONTEND_URL=https://stockweather-frontend.vercel.app" \
-            --update-secrets="\
-              DB_USERNAME=DB_USERNAME:latest,\
-              DB_PASSWORD=DB_PASSWORD:latest,\
-              DB_DATABASE=DB_DATABASE:latest,\
-              JWT_SECRET=JWT_SECRET:latest,\
-              CHATGPT_API_KEY=CHATGPT_API_KEY:latest,\
-              DART_OPENAPI_KEY=DART_OPENAPI_KEY:latest,\
-              KAKAO_CLIENT_ID=KAKAO_CLIENT_ID:latest,\
-              KAKAO_CLIENT_SECRET=KAKAO_CLIENT_SECRET:latest,\
-              KAKAO_CALLBACK_URL=KAKAO_CALLBACK_URL:latest" \
-            --port=8080 \
-            --min-instances=1 \
-            --use-http2 \
-            --quiet
+            - name: 'Deploy WebSocket to Cloud Run'
+            run: |
+              gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
+                --image=${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} \
+                --region=${{ secrets.GCP_REGION }} \
+                --allow-unauthenticated \
+                --timeout=300 \
+                --service-account=${{ secrets.GCP_SA_EMAIL }} \
+                --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
+                --set-env-vars="\
+                  NODE_ENV=production,\
+                  MODE=WS,\
+                  DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
+                  DB_PORT=5432,\
+                  DB_SYNCHRONIZE=false,\
+                  DB_LOGGING=false,\
+                  DB_SSL_ENABLED=false,\
+                  CLOUD_SQL_CONNECTION_NAME=${{ secrets.GCP_SQL_CONNECTION_NAME }},\
+                  FRONTEND_URL=https://stockweather-frontend.vercel.app" \
+                --update-secrets="\
+                  DB_USERNAME=DB_USERNAME:latest,\
+                  DB_PASSWORD=DB_PASSWORD:latest,\
+                  DB_DATABASE=DB_DATABASE:latest,\
+                  JWT_SECRET=JWT_SECRET:latest,\
+                  CHATGPT_API_KEY=CHATGPT_API_KEY:latest,\
+                  DART_OPENAPI_KEY=DART_OPENAPI_KEY:latest,\
+                  KAKAO_CLIENT_ID=KAKAO_CLIENT_ID:latest,\
+                  KAKAO_CLIENT_SECRET=KAKAO_CLIENT_SECRET:latest,\
+                  KAKAO_CALLBACK_URL=KAKAO_CALLBACK_URL:latest" \
+                --port=8080 \
+                --min-instances=1 \
+                --quiet
 
       - name: 'Move traffic to latest revision (WebSocket)'
         run: |
