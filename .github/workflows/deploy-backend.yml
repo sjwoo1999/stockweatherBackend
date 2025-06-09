@@ -43,7 +43,7 @@ jobs:
           gcloud run services update ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
             --region=${{ secrets.GCP_REGION }} \
             --platform=managed \
-            --remove-env-vars=FRONTEND_URL
+            --remove-env-vars=FRONTEND_URL || true
 
       - name: 'Deploy WebSocket to Cloud Run'
         run: |
@@ -130,7 +130,7 @@ jobs:
           gcloud run services update ${{ secrets.GCP_CR_NAME_REST_API }} \
             --region=${{ secrets.GCP_REGION }} \
             --platform=managed \
-            --remove-env-vars=FRONTEND_URL
+            --remove-env-vars=FRONTEND_URL || true
 
       - name: 'Deploy REST API to Cloud Run'
         run: |
