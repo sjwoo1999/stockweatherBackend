@@ -141,6 +141,7 @@ jobs:
             --timeout=300 \
             --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
+            --memory=512Mi \
             --set-env-vars="\
               NODE_ENV=production,\
               MODE=REST,\
