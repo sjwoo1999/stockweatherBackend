@@ -129,6 +129,7 @@ jobs:
             --set-env-vars="\
               NODE_ENV=production,\
               MODE=REST,\
+              OPENAI_FUNCTION_URL=${{ secrets.OPENAI_FUNCTION_URL }},\
               WEBSOCKET_SERVER_URL=${{ secrets.WEBSOCKET_SERVER_URL }},\
               DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},\
               DB_PORT=5432,\
