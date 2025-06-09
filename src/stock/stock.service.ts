@@ -10,6 +10,7 @@ import {
   DartCompanyInfo,
 } from '../disclosure/disclosure.service';
 import { UsersService } from '../users/users.service';
+import axios from 'axios';
 
 import {
   StockWeatherResponseDto,
@@ -33,6 +34,24 @@ export class StockService {
     private usersService: UsersService,
   ) {}
 
+  async sendEventToWebSocket(socketId: string, eventName: string, data: any) {
+    const websocketUrl = this.configService.get<string>('WEBSOCKET_SERVER_URL'); // 예: https://stockweather-websocket.../emit
+  
+    try {
+      await axios.post(`${websocketUrl}/emit`, {
+        socketId,
+        eventName,
+        data,
+      });
+      this.logger.debug(`[StockService] WebSocket 서버에 이벤트 전송 성공: socketId=${socketId}, event=${eventName}`);
+    } catch (error) {
+      this.logger.error(
+        `[StockService] WebSocket 서버 이벤트 전송 실패: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
   /**
    * 주식 분석 데이터를 가져오고 WebSocket으로 클라이언트에 전송합니다.
    * 이제 DART 공시 정보만을 기반으로 AI 분석을 수행합니다.
@@ -53,7 +72,7 @@ export class StockService {
 
     try {
       // 1. DART에서 회사 정보 조회 및 corpCode 확정
-      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+      await this.sendEventToWebSocket(socketId, 'analysisProgress', {
         query: query,
         corpCode: corpCode || 'UNKNOWN',
         socketId: socketId,
@@ -94,7 +113,7 @@ export class StockService {
             relatedStocks: defaultAnalysisResult.relatedStocks,
             articles: [], // 공시가 없으므로 빈 배열
           };
-          this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+          await this.sendEventToWebSocket(socketId, 'processingComplete', {
             // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
             stock: stockData,
             weatherIcon: 'unknown',
@@ -138,7 +157,7 @@ export class StockService {
             relatedStocks: defaultAnalysisResult.relatedStocks,
             articles: [],
           };
-          this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+          await this.sendEventToWebSocket(socketId, 'processingComplete', {
             stock: stockData,
             weatherIcon: 'unknown',
             timestamp: new Date().toISOString(),
@@ -161,7 +180,7 @@ export class StockService {
       }
 
       // 2. DART에서 최신 공시 정보 조회
-      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+      await this.sendEventToWebSocket(socketId, 'analysisProgress', {
         query: query,
         corpCode: corpCode,
         socketId: socketId,
@@ -195,7 +214,7 @@ export class StockService {
           relatedStocks: defaultAnalysisResult.relatedStocks,
           articles: [], // 공시가 없으므로 빈 배열
         };
-        this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+        await this.sendEventToWebSocket(socketId, 'processingComplete', {
           // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
           stock: stockData,
           weatherIcon: 'unknown',
@@ -211,7 +230,7 @@ export class StockService {
       }
 
       // 3. AI 분석 서비스 호출
-      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+      await this.sendEventToWebSocket(socketId, 'analysisProgress', {
         query: query,
         corpCode: corpCode,
         socketId: socketId,
@@ -273,7 +292,7 @@ export class StockService {
         newsCount: recentDisclosures.length, // 조회된 공시 개수 포함
       };
 
-      this.eventsGateway.sendToClient(
+      await this.sendEventToWebSocket(
         socketId,
         'processingComplete',
         finalResponse,
@@ -286,7 +305,7 @@ export class StockService {
         `[StockService] 주식 분석 중 치명적인 오류 발생: ${error.message}`,
         error.stack,
       );
-      this.eventsGateway.sendToClient(socketId, 'processingComplete', {
+      await this.sendEventToWebSocket(socketId, 'processingComplete', {
         // ⭐ 이벤트 이름 수정: 'processingComplete' ⭐
         stock: {
           name: companyName,
