@@ -54,8 +54,8 @@ jobs:
             --timeout=300 \
             --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-            --memory=512Mi \  # ✅ 메모리 추가
-            --ingress=all \   # ✅ ingress 허용 추가 (WebSocket 지원)
+            --memory=512Mi \
+            --ingress=all \
             --set-env-vars="\
               NODE_ENV=production,\
               MODE=WS,\
@@ -77,7 +77,7 @@ jobs:
               KAKAO_CLIENT_SECRET=KAKAO_CLIENT_SECRET:latest,\
               KAKAO_CALLBACK_URL=KAKAO_CALLBACK_URL:latest" \
             --port=8080 \
-            --min-instances=1 \  # WebSocket은 1개 유지 권장
+            --min-instances=1 \
             --use-http2 \
             --quiet
 
@@ -143,8 +143,8 @@ jobs:
             --timeout=300 \
             --service-account=${{ secrets.GCP_SA_EMAIL }} \
             --add-cloudsql-instances=${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-            --memory=512Mi \  # ✅ 메모리 추가
-            --ingress=all \   # ✅ ingress 허용 추가 (CORS 문제 해결)
+            --memory=512Mi \
+            --ingress=all \
             --set-env-vars="\
               NODE_ENV=production,\
               MODE=REST,\
