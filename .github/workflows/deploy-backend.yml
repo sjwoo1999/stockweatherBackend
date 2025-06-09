@@ -36,16 +36,15 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
 
-      # ✅ Remove old env var (WebSocket)
-      - name: 'Remove old env var (WebSocket)'
+      # ✅ Remove old secret binding (WebSocket)
+      - name: 'Remove old secret binding (WebSocket)'
         run: |
           gcloud run services update ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
             --region=${{ secrets.GCP_REGION }} \
             --platform=managed \
-            --remove-env-vars=FRONTEND_URL
+            --clear-secrets=FRONTEND_URL
 
-      # ✅ Wait for propagation (WebSocket)
-      - name: 'Wait for Cloud Run propagation (WebSocket)'
+      - name: 'Wait after clearing secret (WebSocket)'
         run: sleep 10
 
       - name: 'Deploy WebSocket to Cloud Run'
@@ -102,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-    needs: deploy-websocket  # WebSocket 성공 후 실행
+    needs: deploy-websocket
 
     steps:
       - name: Checkout repository
@@ -128,16 +127,15 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }}
 
-      # ✅ Remove old env var (REST API)
-      - name: 'Remove old env var (REST API)'
+      # ✅ Remove old secret binding (REST API)
+      - name: 'Remove old secret binding (REST API)'
         run: |
           gcloud run services update ${{ secrets.GCP_CR_NAME_REST_API }} \
             --region=${{ secrets.GCP_REGION }} \
             --platform=managed \
-            --remove-env-vars=FRONTEND_URL
+            --clear-secrets=FRONTEND_URL
 
-      # ✅ Wait for propagation (REST API)
-      - name: 'Wait for Cloud Run propagation (REST API)'
+      - name: 'Wait after clearing secret (REST API)'
         run: sleep 10
 
       - name: 'Deploy REST API to Cloud Run'
