@@ -1,0 +1,44 @@
+# 🚀 Deploy OpenAI Caller (Cloud Function Gen 2)
+
+name: Deploy OpenAI Caller (Cloud Function)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'openai-caller/**'
+
+jobs:
+  deploy-function:
+    name: Deploy OpenAI Caller Function
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          service_account: '${{ secrets.GCP_SA_EMAIL }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy OpenAI Caller Function
+        run: |
+          gcloud functions deploy openai-caller \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --entry-point=chatgpt-analysis \
+            --source=openai-caller \
+            --trigger-http \
+            --allow-unauthenticated \
+            --timeout=60s \
+            --memory=512Mi \
+            --set-env-vars="CHATGPT_API_KEY=${{ secrets.CHATGPT_API_KEY }}"
