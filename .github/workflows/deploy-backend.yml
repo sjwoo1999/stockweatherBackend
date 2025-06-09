@@ -46,7 +46,7 @@ jobs:
             --remove-env-vars=FRONTEND_URL || true
 
       - name: 'Deploy WebSocket to Cloud Run'
-         run: |
+        run: |
           gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
              --image=${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} \
              --region=${{ secrets.GCP_REGION }} \
