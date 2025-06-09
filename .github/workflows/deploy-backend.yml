@@ -33,7 +33,7 @@ jobs:
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: 'Build Docker image for WebSocket'
-        run: docker build --build-arg ENTRY_FILE=bootstrap-ws -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
+        run: docker build --build-arg ENTRY_FILE=main-ws -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
@@ -98,7 +98,7 @@ jobs:
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: 'Build Docker image for REST API'
-        run: docker build --build-arg ENTRY_FILE=bootstrap-rest -t ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }} .
+        run: docker build --build-arg ENTRY_FILE=main-rest -t ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }}
