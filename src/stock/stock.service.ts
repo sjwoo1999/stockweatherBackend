@@ -4,7 +4,6 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIAnalysisService } from '../ai-analysis/ai-analysis.service';
 import { EventsGateway } from '../events/events.gateway';
-import { KeywordMappingService } from './keyword-mapping.service';
 import {
   DisclosureService,
   DartCompanyInfo,
@@ -28,7 +27,6 @@ export class StockService {
     @Inject(forwardRef(() => AIAnalysisService))
     private aiAnalysisService: AIAnalysisService,
     private eventsGateway: EventsGateway,
-    private keywordMappingService: KeywordMappingService,
     private disclosureService: DisclosureService,
     private configService: ConfigService,
     private usersService: UsersService,

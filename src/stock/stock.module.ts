@@ -5,7 +5,6 @@ import { StockService } from './stock.service';
 import { StockController } from './stock.controller';
 import { AIAnalysisModule } from '../ai-analysis/ai-analysis.module';
 import { AuthModule } from '../auth/auth.module';
-import { KeywordMappingService } from './keyword-mapping.service';
 import { EventsModule } from '../events/events.module';
 import { DisclosureModule } from '../disclosure/disclosure.module';
 import { ConfigModule } from '@nestjs/config';
@@ -20,7 +19,7 @@ import { UsersModule } from '../users/users.module'; // ⭐ 추가: UsersModule 
     ConfigModule,
     UsersModule, // ⭐ 중요: UsersModule 추가 ⭐
   ],
-  providers: [StockService, KeywordMappingService],
+  providers: [StockService],
   controllers: [StockController],
   exports: [StockService],
 })
