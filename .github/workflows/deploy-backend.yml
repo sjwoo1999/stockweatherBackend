@@ -39,7 +39,7 @@ jobs:
         run: npm run build:ws
 
       - name: 'Build Docker image for WebSocket'
-        run: docker build --build-arg ENTRY_FILE=main-ws -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
+         run: docker build -f Dockerfile.websocket -t ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
@@ -107,7 +107,7 @@ jobs:
         run: npm run build:rest
       
       - name: 'Build Docker image for REST API'
-        run: docker build --build-arg ENTRY_FILE=main-rest -t ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }} .
+        run: docker build -f Dockerfile.rest -t ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }} .
 
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }}

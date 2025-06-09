@@ -1,10 +1,12 @@
+# Dockerfile.websocket
+
 # Stage 1
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source and build
 COPY . .
@@ -22,9 +24,5 @@ COPY --from=builder /app/package*.json ./
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# ENTRY_FILE 은 main-ws 또는 main-rest 를 받아서 실행
-
-ARG ENTRY_FILE=main-ws
-ENV ENTRY_FILE=${ENTRY_FILE}
-
-CMD ["sh", "-c", "node dist/$ENTRY_FILE.js"]
+# WebSocket 고정 entry point
+CMD ["node", "dist/main-ws.js"]
