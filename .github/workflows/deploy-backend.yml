@@ -38,13 +38,6 @@ jobs:
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_WEBSOCKET }}:${{ github.sha }}
 
-      - name: 'Remove old env var (WebSocket)'
-        run: |
-          gcloud run services update ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --platform=managed \
-            --remove-env-vars=FRONTEND_URL || true
-
       - name: 'Deploy WebSocket to Cloud Run'
         run: |
           gcloud run deploy ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
@@ -79,21 +72,6 @@ jobs:
              --no-use-http2 \
              --quiet
 
-      - name: 'Move traffic to latest revision (WebSocket)'
-        run: |
-          gcloud run services update-traffic ${{ secrets.GCP_CR_NAME_WEBSOCKET }} \
-            --to-latest \
-            --region=${{ secrets.GCP_REGION }} \
-            --platform=managed
-
-      - name: 'Clean up old revisions (WebSocket)'
-        run: |
-          OLD_REVISIONS=$(gcloud run revisions list --service=${{ secrets.GCP_CR_NAME_WEBSOCKET }} --region=${{ secrets.GCP_REGION }} --platform=managed --filter="traffic:0" --format="value(METADATA.name)")
-          for REV in $OLD_REVISIONS; do
-            echo "Deleting old revision: $REV"
-            gcloud run revisions delete $REV --region=${{ secrets.GCP_REGION }} --platform=managed --quiet
-          done
-
   deploy-rest-api:
     name: Deploy REST API (Cloud Run)
     runs-on: ubuntu-latest
@@ -124,19 +102,6 @@ jobs:
 
       - name: 'Push Docker image to Artifact Registry'
         run: docker push ${{ secrets.GCP_AR_IMAGE_PATH_REST_API }}:${{ github.sha }}
-
-      - name: 'Remove old env var (REST API)'
-        run: |
-          gcloud run services update ${{ secrets.GCP_CR_NAME_REST_API }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --platform=managed \
-            --remove-env-vars=FRONTEND_URL || true
-
-      - name: 'Ensure no Cloud Functions service (REST API)'
-        run: |
-          gcloud functions delete ${{ secrets.GCP_CR_NAME_REST_API }} \
-            --region=${{ secrets.GCP_REGION }} \
-            --gen2 --quiet || true
 
       - name: 'Deploy REST API to Cloud Run'
         run: |
@@ -173,18 +138,3 @@ jobs:
             --min-instances=0 \
             --no-use-http2 \
             --quiet
-
-      - name: 'Move traffic to latest revision (REST API)'
-        run: |
-          gcloud run services update-traffic ${{ secrets.GCP_CR_NAME_REST_API }} \
-            --to-latest \
-            --region=${{ secrets.GCP_REGION }} \
-            --platform=managed
-
-      - name: 'Clean up old revisions (REST API)'
-        run: |
-          OLD_REVISIONS=$(gcloud run revisions list --service=${{ secrets.GCP_CR_NAME_REST_API }} --region=${{ secrets.GCP_REGION }} --platform=managed --filter="traffic:0" --format="value(METADATA.name)")
-          for REV in $OLD_REVISIONS; do
-            echo "Deleting old revision: $REV"
-            gcloud run revisions delete $REV --region=${{ secrets.GCP_REGION }} --platform=managed --quiet
-          done
