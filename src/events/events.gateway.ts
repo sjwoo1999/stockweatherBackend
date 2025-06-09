@@ -36,16 +36,23 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   sendToClient(socketId: string, eventName: string, data: any): void {
-    const clientSocket = this.server.sockets.sockets.get(socketId);
-
-    const connectedSocketIds = Array.from(this.server.sockets.sockets.keys());
-    this.logger.debug(`[EventsGateway] Connected socketIds before sending "${eventName}": ${JSON.stringify(connectedSocketIds)}`);
-
-    if (clientSocket) {
-      clientSocket.emit(eventName, data);
-      this.logger.debug(`[EventsGateway] Event "${eventName}" sent to client ${socketId}`);
-    } else {
-      this.logger.warn(`[EventsGateway] Client with socketId ${socketId} not found. Could not send event "${eventName}".`);
+    try {
+      const clientSocket = this.server.sockets.sockets.get(socketId);
+      if (clientSocket) {
+        clientSocket.emit(eventName, data);
+        this.logger.debug(
+          `[${EventsGateway.name}] Event "${eventName}" sent to client ${socketId}`,
+        );
+      } else {
+        this.logger.warn(
+          `[${EventsGateway.name}] Client with socketId ${socketId} not found. Could not send event "${eventName}".`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `[${EventsGateway.name}] Error sending event "${eventName}" to client ${socketId}: ${err.message}`,
+        err.stack,
+      );
     }
   }
 
