@@ -5,17 +5,22 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
-  "main": "dist/bootstrap-rest.js",
+  "main": "dist/main-rest.js",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "npm run start:rest",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:rest": "node dist/bootstrap-rest.js",
-    "start:ws": "node dist/bootstrap-ws.js",
-    "start:prod:rest": "node dist/bootstrap-rest.js",
-    "start:prod:ws": "node dist/bootstrap-ws.js",
+    
+    "start:rest": "node dist/main-rest.js",
+    "start:ws": "node dist/main-ws.js",
+
+    "start:prod:rest": "node dist/main-rest.js",
+    "start:prod:ws": "node dist/main-ws.js",
+
+    "start:rest-functions": "functions-framework --target=stockweatherRestApi",
+
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

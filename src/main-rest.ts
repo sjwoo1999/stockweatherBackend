@@ -16,6 +16,7 @@ async function bootstrap() {
       origin: process.env.FRONTEND_URL,
       credentials: true,
     },
+    logger: console,
   });
 
   const config = new DocumentBuilder()
