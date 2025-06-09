@@ -12,13 +12,11 @@ const expressApp = express();
 
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
-  // ✅ CORS 설정
   app.enableCors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
   });
 
-  // ✅ Swagger
   const config = new DocumentBuilder()
     .setTitle('StockWeather Backend API')
     .setDescription('The StockWeather Backend API description')
@@ -32,7 +30,10 @@ const expressApp = express();
   await app.init();
 
   logger.log(`🚀 REST API for Cloud Functions ready`);
-})();
 
-// 👉 Cloud Functions 등록
-functions.http('stockweatherRestApi', expressApp);
+  // 👉 반드시 Nest app의 express 인스턴스를 사용해야 함
+  const nestExpress = app.getHttpAdapter().getInstance();
+
+  // 👉 Cloud Functions 등록
+  functions.http('stockweatherRestApi', nestExpress);
+})();

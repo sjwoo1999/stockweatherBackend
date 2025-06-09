@@ -35,6 +35,7 @@ import * as cors from 'cors';
   logger.log(`🚀 REST API for Cloud Run ready`);
 
   const port = process.env.PORT || 8080;
+  await app.init();
   await app.listen(port);
 
   logger.log(`✅ Listening on port ${port}`);

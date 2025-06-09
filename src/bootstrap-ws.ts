@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  await app.init();
   const port = process.env.PORT || 8080;
 
   const httpServer = createServer(app.getHttpAdapter().getInstance());
