@@ -1,9 +1,6 @@
-// src/ai-analysis/ai-analysis.service.ts
-
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DisclosureItem } from '../disclosure/interfaces/disclosure-item.interface';
-import { EventsGateway } from '../events/events.gateway';
 import { AIAnalysisResult } from '../types/stock';
 import axios from 'axios';
 
@@ -11,20 +8,25 @@ import axios from 'axios';
 export class AIAnalysisService {
   private readonly logger = new Logger(AIAnalysisService.name);
   private readonly openaiFunctionUrl: string;
+  private readonly websocketServerUrl: string;
 
-  constructor(
-    private configService: ConfigService,
-    @Inject(forwardRef(() => EventsGateway))
-    private eventsGateway: EventsGateway,
-  ) {
+  constructor(private configService: ConfigService) {
     this.openaiFunctionUrl =
       this.configService.get<string>('OPENAI_FUNCTION_URL') || '';
     if (!this.openaiFunctionUrl) {
       this.logger.error('OPENAI_FUNCTION_URL 환경 변수가 설정되지 않았습니다.');
       throw new Error('OPENAI_FUNCTION_URL is not configured.');
     }
+
+    this.websocketServerUrl =
+      this.configService.get<string>('WEBSOCKET_SERVER_URL') || '';
+    if (!this.websocketServerUrl) {
+      this.logger.error('WEBSOCKET_SERVER_URL 환경 변수가 설정되지 않았습니다.');
+      throw new Error('WEBSOCKET_SERVER_URL is not configured.');
+    }
+
     this.logger.log(
-      `[AIAnalysisService] Initialized with OPENAI_FUNCTION_URL=${this.openaiFunctionUrl}`,
+      `[AIAnalysisService] Initialized with OPENAI_FUNCTION_URL=${this.openaiFunctionUrl}, WEBSOCKET_SERVER_URL=${this.websocketServerUrl}`,
     );
   }
 
@@ -40,7 +42,7 @@ export class AIAnalysisService {
     );
 
     // 1단계 진행 상황 알림
-    this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+    await this.emitToWebSocket(socketId, 'analysisProgress', {
       query,
       corpCode,
       socketId,
@@ -62,7 +64,7 @@ export class AIAnalysisService {
       this.logger.debug(`[AIAnalysisService] AI Function 응답: ${JSON.stringify(response.data)}`);
 
       // 2단계 진행 상황 알림
-      this.eventsGateway.sendToClient(socketId, 'analysisProgress', {
+      await this.emitToWebSocket(socketId, 'analysisProgress', {
         query,
         corpCode,
         socketId,
@@ -88,6 +90,37 @@ export class AIAnalysisService {
         stockName,
         `AI 분석 중 오류 발생: ${error.message}`,
       );
+    }
+  }
+
+  private async emitToWebSocket(
+    socketId: string,
+    eventName: string,
+    data: any,
+  ): Promise<void> {
+    try {
+      this.logger.debug(
+        `[AIAnalysisService] emitToWebSocket 호출: socketId=${socketId}, event=${eventName}`,
+      );
+
+      await axios.post(`${this.websocketServerUrl}/emit`, {
+        socketId,
+        eventName,
+        data,
+      });
+
+      this.logger.debug(
+        `[AIAnalysisService] WebSocket emit 성공: socketId=${socketId}, event=${eventName}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[AIAnalysisService] WebSocket emit 실패: ${error.message}`,
+      );
+      if (error.response) {
+        this.logger.error(
+          `[AIAnalysisService] WebSocket 서버 응답 에러: ${JSON.stringify(error.response.data)}`,
+        );
+      }
     }
   }
 
