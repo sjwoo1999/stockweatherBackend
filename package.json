@@ -7,11 +7,11 @@
   "license": "UNLICENSED",
   "main": "dist/main-rest.js",
   "scripts": {
-    "build": "nest build",
-    "build:rest": "nest build --entryFile main-rest",
-    "build:ws": "nest build --entryFile main-ws",
+    "build": "npx nest build",
+    "build:rest": "npx nest build --entryFile main-rest",
+    "build:ws": "npx nest build --entryFile main-ws",
     "start": "npm run start:rest",
-    "start:dev": "nest start --watch",
+    "start:dev": "npx nest start --watch",
     "start:rest": "node dist/main-rest.js",
     "start:ws": "node dist/main-ws.js",
     "start:prod:rest": "node dist/main-rest.js",
@@ -22,7 +22,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json"
-  },
+},
   "dependencies": {
     "@google-cloud/functions-framework": "^4.0.0",
     "@nestjs/common": "^11.0.1",
