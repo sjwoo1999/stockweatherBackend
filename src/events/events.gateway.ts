@@ -37,7 +37,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   sendToClient(socketId: string, eventName: string, data: any): void {
     try {
-      const clientSocket = this.server.sockets.sockets.get(socketId);
+      const namespace = this.server.of('/'); // ⭐️ 명시적 namespace 접근
+      const clientSocket = namespace.sockets.get(socketId);
+  
       if (clientSocket) {
         clientSocket.emit(eventName, data);
         this.logger.debug(
