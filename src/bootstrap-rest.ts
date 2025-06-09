@@ -2,27 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
-import * as cors from 'cors';
-import * as express from 'express';
 
 (async () => {
   const logger = new Logger('Bootstrap');
 
-  const expressApp = express();
-
-  // ✅ Express CORS middleware (가장 먼저)
-  expressApp.use(cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  }));
-
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,
-    cors: false, // Nest 내부 CORS 사용 X
+    cors: {
+      origin: process.env.FRONTEND_URL,
+      credentials: true,
+    },
     logger: console,
   });
 
-  // ✅ Swagger 설정
   const config = new DocumentBuilder()
     .setTitle('StockWeather Backend API')
     .setDescription('The StockWeather Backend API description')
