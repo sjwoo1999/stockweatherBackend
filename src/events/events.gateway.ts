@@ -37,22 +37,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   sendToClient(socketId: string, eventName: string, data: any): void {
     try {
-      // 올바른 접근법 👇
-      const clientSocket = this.server.sockets.sockets.get(socketId);
-
-      if (clientSocket) {
-        clientSocket.emit(eventName, data);
-        this.logger.debug(
-          `[${EventsGateway.name}] Event "${eventName}" sent to client ${socketId}`,
-        );
-      } else {
-        this.logger.warn(
-          `[${EventsGateway.name}] Client with socketId ${socketId} not found. Could not send event "${eventName}".`,
-        );
-      }
+      this.logger.log(
+        `[EventsGateway] Sending event "${eventName}" to socketId="${socketId}"`,
+      );
+  
+      // Socket.IO 공식 방식으로 emit → 이게 REST API 경유 / WebSocket 둘 다 잘 됨
+      this.server.to(socketId).emit(eventName, data);
+  
+      this.logger.log(
+        `[EventsGateway] Successfully sent "${eventName}" to socketId="${socketId}"`,
+      );
     } catch (err) {
       this.logger.error(
-        `[${EventsGateway.name}] Error sending event "${eventName}" to client ${socketId}: ${err.message}`,
+        `[EventsGateway] Error sending event "${eventName}" to client ${socketId}: ${err.message}`,
         err.stack,
       );
     }
