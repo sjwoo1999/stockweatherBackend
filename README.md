@@ -1,98 +1,149 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# StockWeather Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+주식 시장과 날씨 정보를 결합한 실시간 데이터 분석 및 알림 서비스의 백엔드 시스템입니다.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 기술 스택
 
-## Description
+- **프레임워크**: NestJS
+- **언어**: TypeScript
+- **데이터베이스**: PostgreSQL
+- **실시간 통신**: WebSocket (Socket.IO)
+- **인증**: JWT, Kakao OAuth
+- **AI 통합**: OpenAI
+- **배포**: Docker, Google Cloud Functions
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 주요 기능
 
-## Project setup
+- 실시간 주식 시장 데이터 처리
+- 날씨 정보와 주식 데이터 연계 분석
+- AI 기반 시장 분석 및 예측
+- 실시간 알림 시스템
+- 사용자 인증 및 권한 관리
+- 공시 정보 처리 및 분석
 
-```bash
-$ npm install
+## 프로젝트 구조
+
+```
+src/
+├── stock/          # 주식 관련 기능
+├── websocket/      # 실시간 통신
+├── disclosure/     # 공시 관련 기능
+├── ai-analysis/    # AI 분석 기능
+├── users/          # 사용자 관리
+├── auth/           # 인증 관련
+└── utils/          # 유틸리티 함수
 ```
 
-## Compile and run the project
+## 시작하기
+
+### 필수 조건
+
+- Node.js (v18 이상)
+- PostgreSQL
+- Docker (선택사항)
+
+### 설치
 
 ```bash
-# development
-$ npm run start
+# 의존성 설치
+npm install
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# 개발 환경 설정
+cp .env.example .env.development
 ```
 
-## Run tests
+### 환경 변수 설정
+
+`.env.development` 파일에 다음 환경 변수들을 설정해주세요:
+
+```env
+# 데이터베이스
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+DB_DATABASE=stockweather
+DB_SSL_ENABLED=false
+
+# JWT
+JWT_SECRET=your_jwt_secret
+
+# Kakao OAuth
+KAKAO_CLIENT_ID=your_kakao_client_id
+KAKAO_CLIENT_SECRET=your_kakao_client_secret
+
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### 실행
 
 ```bash
-# unit tests
-$ npm run test
+# 개발 모드
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
+# REST API 서버
+npm run start:rest
 
-# test coverage
-$ npm run test:cov
+# WebSocket 서버
+npm run start:ws
+
+# 프로덕션 모드
+npm run start:prod:rest  # REST API
+npm run start:prod:ws    # WebSocket
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Docker로 실행
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# REST API 서버
+docker build -f Dockerfile.rest -t stockweather-rest .
+docker run -p 3000:3000 stockweather-rest
+
+# WebSocket 서버
+docker build -f Dockerfile.websocket -t stockweather-ws .
+docker run -p 3001:3001 stockweather-ws
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## API 문서
 
-## Resources
+API 문서는 Swagger를 통해 제공됩니다. 서버 실행 후 다음 URL에서 확인할 수 있습니다:
 
-Check out a few resources that may come in handy when working with NestJS:
+```
+http://localhost:3000/api
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 테스트
 
-## Support
+```bash
+# 단위 테스트
+npm run test
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# E2E 테스트
+npm run test:e2e
 
-## Stay in touch
+# 테스트 커버리지
+npm run test:cov
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 배포
 
-## License
+### Google Cloud Functions
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+# REST API 배포
+gcloud functions deploy stockweather-rest \
+  --runtime nodejs18 \
+  --trigger-http \
+  --entry-point bootstrapRestFunctions
+
+# WebSocket 배포
+gcloud functions deploy stockweather-ws \
+  --runtime nodejs18 \
+  --trigger-http \
+  --entry-point bootstrapWsFunctions
+```
+
+## 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
