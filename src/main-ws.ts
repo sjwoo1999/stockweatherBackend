@@ -32,8 +32,8 @@ async function bootstrap() {
     maxHttpBufferSize: 1 * 1024 * 1024, // 1MB
   });
 
-  // 헬스체크 엔드포인트 추가 (io 객체 생성 후)
-  expressApp.get('/health', (req, res) => {
+  // 헬스체크 엔드포인트 추가 (Express 앱에 직접 추가)
+  expressApp.use('/health', (req, res) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
