@@ -3,7 +3,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIAnalysisService } from '../ai-analysis/ai-analysis.service';
-import { EventsGateway } from '../events/events.gateway';
+// import { EventsGateway } from '../events/events.gateway'; // 제거
 import {
   DisclosureService,
   DartCompanyInfo,
@@ -26,7 +26,7 @@ export class StockService {
   constructor(
     @Inject(forwardRef(() => AIAnalysisService))
     private aiAnalysisService: AIAnalysisService,
-    private eventsGateway: EventsGateway,
+    // private eventsGateway: EventsGateway, // 제거
     private disclosureService: DisclosureService,
     private configService: ConfigService,
     private usersService: UsersService,
@@ -39,21 +39,21 @@ export class StockService {
         this.logger.warn('[StockService] socketId가 제공되지 않았습니다.');
         return;
       }
-
-      // EventsGateway를 통해 직접 전송 (더 안정적)
-      if (this.eventsGateway.isSocketConnected(socketId)) {
-        this.eventsGateway.sendToClient(socketId, eventName, data);
-        this.logger.debug(`[StockService] EventsGateway를 통해 이벤트 전송 성공: socketId=${socketId}, event=${eventName}`);
-      } else {
-        this.logger.warn(`[StockService] 소켓 ${socketId}가 연결되지 않았습니다. 이벤트 전송 건너뜀.`);
-        
-        // 연결된 소켓 목록 로깅
-        const connectedSockets = this.eventsGateway.getConnectedSocketIds();
-        this.logger.debug(`[StockService] 현재 연결된 소켓들: ${JSON.stringify(connectedSockets)}`);
+      // 서버리스 환경에서는 HTTP로 WebSocket 서버에 요청
+      const websocketUrl = this.configService.get<string>('WEBSOCKET_SERVER_URL');
+      if (!websocketUrl) {
+        this.logger.error('[StockService] WEBSOCKET_SERVER_URL 환경변수가 설정되지 않았습니다.');
+        return;
       }
+      await axios.post(`${websocketUrl}/emit`, {
+        socketId,
+        eventName,
+        data,
+      });
+      this.logger.debug(`[StockService] WebSocket 서버에 이벤트 전송 성공: socketId=${socketId}, event=${eventName}`);
     } catch (error) {
       this.logger.error(
-        `[StockService] WebSocket 이벤트 전송 실패: ${error.message}`,
+        `[StockService] WebSocket 서버 이벤트 전송 실패: ${error.message}`,
         error.stack,
       );
     }
