@@ -51,6 +51,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   sendToClient(socketId: string, eventName: string, data: any): void {
     try {
+      // WebSocket 서버 준비 상태 방어
+      if (!this.server || !this.server.sockets || !this.server.sockets.sockets) {
+        this.logger.error('[EventsGateway] WebSocket server not ready. Cannot emit event.');
+        return;
+      }
       // 소켓이 실제로 연결되어 있는지 확인
       const socket = this.server.sockets.sockets.get(socketId);
       if (!socket) {
