@@ -33,18 +33,27 @@ export class StockService {
   ) {}
 
   async sendEventToWebSocket(socketId: string, eventName: string, data: any) {
-    const websocketUrl = this.configService.get<string>('WEBSOCKET_SERVER_URL'); // 예: https://stockweather-websocket.../emit
-  
     try {
-      await axios.post(`${websocketUrl}/emit`, {
-        socketId,
-        eventName,
-        data,
-      });
-      this.logger.debug(`[StockService] WebSocket 서버에 이벤트 전송 성공: socketId=${socketId}, event=${eventName}`);
+      // 소켓 ID 유효성 검사
+      if (!socketId) {
+        this.logger.warn('[StockService] socketId가 제공되지 않았습니다.');
+        return;
+      }
+
+      // EventsGateway를 통해 직접 전송 (더 안정적)
+      if (this.eventsGateway.isSocketConnected(socketId)) {
+        this.eventsGateway.sendToClient(socketId, eventName, data);
+        this.logger.debug(`[StockService] EventsGateway를 통해 이벤트 전송 성공: socketId=${socketId}, event=${eventName}`);
+      } else {
+        this.logger.warn(`[StockService] 소켓 ${socketId}가 연결되지 않았습니다. 이벤트 전송 건너뜀.`);
+        
+        // 연결된 소켓 목록 로깅
+        const connectedSockets = this.eventsGateway.getConnectedSocketIds();
+        this.logger.debug(`[StockService] 현재 연결된 소켓들: ${JSON.stringify(connectedSockets)}`);
+      }
     } catch (error) {
       this.logger.error(
-        `[StockService] WebSocket 서버 이벤트 전송 실패: ${error.message}`,
+        `[StockService] WebSocket 이벤트 전송 실패: ${error.message}`,
         error.stack,
       );
     }
