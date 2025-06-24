@@ -17,6 +17,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   await app.init();
 
+  // 헬스체크 엔드포인트 추가
+  expressApp.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      connected_clients: io.engine.clientsCount,
+      server: 'NestJS-WebSocket'
+    });
+  });
+
   const httpServer = createServer(expressApp);
 
   const io = new Server(httpServer, {
@@ -40,13 +50,19 @@ async function bootstrap() {
       logger.error(`[Socket Auth] JWT token required. id=${socket.id}`);
       return next(new Error('JWT token required'));
     }
-    if (!process.env.JWT_SECRET) {
+    
+    // JWT_SECRET 확인 및 설정
+    let jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
       logger.error('[Socket Auth] JWT_SECRET 환경변수가 설정되지 않았습니다.');
-      return next(new Error('JWT_SECRET not set'));
+      logger.error('[Socket Auth] Cloud Run에서 JWT_SECRET 시크릿을 설정해주세요.');
+      return next(new Error('JWT_SECRET not configured'));
     }
+    
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      const payload = jwt.verify(token, jwtSecret);
       socket.data.user = payload; // 사용자 정보 저장
+      logger.log(`[Socket Auth] JWT 검증 성공: ${payload.sub || 'unknown'}, id=${socket.id}`);
       next();
     } catch (err) {
       socket.emit('auth_error', { message: 'Invalid or expired token' });
