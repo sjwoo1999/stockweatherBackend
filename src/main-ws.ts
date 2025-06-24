@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import * as express from 'express';
 import { ExpressAdapter } from '@nestjs/platform-express';
+import jwt from 'jsonwebtoken';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -24,20 +25,82 @@ async function bootstrap() {
       methods: ['GET', 'POST'],
       credentials: true,
     },
+    pingTimeout: 20000,
+    pingInterval: 25000,
+    upgradeTimeout: 10000,
+    transports: ['websocket'],
+    maxHttpBufferSize: 1 * 1024 * 1024, // 1MB
   });
 
+  // JWT 인증 미들웨어
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.headers['authorization'];
+    if (!token) {
+      socket.emit('auth_error', { message: 'JWT token required' });
+      logger.error(`[Socket Auth] JWT token required. id=${socket.id}`);
+      return next(new Error('JWT token required'));
+    }
+    if (!process.env.JWT_SECRET) {
+      logger.error('[Socket Auth] JWT_SECRET 환경변수가 설정되지 않았습니다.');
+      return next(new Error('JWT_SECRET not set'));
+    }
+    try {
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      socket.data.user = payload; // 사용자 정보 저장
+      next();
+    } catch (err) {
+      socket.emit('auth_error', { message: 'Invalid or expired token' });
+      logger.error(`[Socket Auth] JWT 검증 실패: ${err.message}, id=${socket.id}`);
+      return next(new Error('Invalid or expired token'));
+    }
+  });
+
+  // 연결 상태 모니터링 및 로깅
+  function logClientCount() {
+    logger.log(`[WebSocket] 현재 연결 수: ${io.engine.clientsCount}`);
+  }
+
   io.on('connection', (socket) => {
-    logger.log(`WebSocket client connected: ${socket.id}`);
+    logger.log(`[WebSocket] Client connected: ${socket.id}`);
+    logClientCount();
 
     socket.on('message', (msg) => {
       logger.log(`Received message: ${msg}`);
       socket.emit('message', `Echo: ${msg}`);
     });
 
-    socket.on('disconnect', () => {
-      logger.log(`WebSocket client disconnected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+      logger.log(`[WebSocket] Client disconnected: ${socket.id}, reason: ${reason}`);
+      logClientCount();
     });
   });
+
+  // 30초마다 연결 상태 체크
+  setInterval(() => {
+    logger.log(`[WebSocket] 연결 상태 체크: ${io.engine.clientsCount}명 연결 중`);
+  }, 30000);
+
+  // 안정적인 이벤트 전송 함수 (재시도 포함)
+  async function emitWithRetry(socket, event, data, maxRetries = 3) {
+    let attempt = 0;
+    let delay = 1000;
+    while (attempt < maxRetries) {
+      try {
+        if (socket.connected) {
+          socket.emit(event, { ...data, socketId: socket.id });
+          logger.log(`[Emit Retry] ${event} 성공 (시도 ${attempt + 1}): ${socket.id}`);
+          return true;
+        }
+      } catch (err) {
+        logger.error(`[Emit Retry] ${event} 실패 (시도 ${attempt + 1}): ${err}`);
+      }
+      await new Promise(res => setTimeout(res, delay));
+      delay *= 2;
+      attempt++;
+    }
+    logger.error(`[Emit Retry] ${event} 최종 실패: ${socket.id}`);
+    return false;
+  }
 
   const port = process.env.PORT || 8080;
   httpServer.listen(port, () => {
