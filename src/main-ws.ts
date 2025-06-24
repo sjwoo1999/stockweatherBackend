@@ -17,16 +17,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   await app.init();
 
-  // 헬스체크 엔드포인트 추가
-  expressApp.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      connected_clients: io.engine.clientsCount,
-      server: 'NestJS-WebSocket'
-    });
-  });
-
   const httpServer = createServer(expressApp);
 
   const io = new Server(httpServer, {
@@ -40,6 +30,16 @@ async function bootstrap() {
     upgradeTimeout: 10000,
     transports: ['websocket'],
     maxHttpBufferSize: 1 * 1024 * 1024, // 1MB
+  });
+
+  // 헬스체크 엔드포인트 추가 (io 객체 생성 후)
+  expressApp.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      connected_clients: io.engine.clientsCount,
+      server: 'NestJS-WebSocket'
+    });
   });
 
   // JWT 인증 미들웨어
