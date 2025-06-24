@@ -76,7 +76,7 @@ export class AuthController {
 
       // 🔴🔴🔴🔴🔴 수정된 부분: 백틱(`` ` ``)을 사용하여 변수를 올바르게 삽입합니다. 🔴🔴🔴🔴🔴
       // 이 한 줄만 사용하고 기존 주석은 삭제하세요.
-      res.redirect(`${frontendBaseUrl}/login-success?token=${jwtToken}`);
+      res.redirect(`${frontendBaseUrl}/dashboard?token=${jwtToken}`);
     } catch (error) {
       // JWT 토큰 생성 또는 리다이렉션 중 오류 발생 시 처리
       console.error(
