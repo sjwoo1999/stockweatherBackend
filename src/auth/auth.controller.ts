@@ -76,7 +76,16 @@ export class AuthController {
 
       // 🔴🔴🔴🔴🔴 수정된 부분: 백틱(`` ` ``)을 사용하여 변수를 올바르게 삽입합니다. 🔴🔴🔴🔴🔴
       // 이 한 줄만 사용하고 기존 주석은 삭제하세요.
-      res.redirect(`${frontendBaseUrl}/dashboard?token=${jwtToken}`);
+      // JWT 토큰을 쿠키로 설정
+      res.cookie('jwtToken', jwtToken, {
+        httpOnly: false, // 프론트엔드에서 접근 가능하도록
+        secure: true, // HTTPS에서만 전송
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000, // 24시간
+      });
+      
+      // 대시보드로 리다이렉트 (토큰은 쿠키에 있음)
+      res.redirect(`${frontendBaseUrl}/dashboard`);
     } catch (error) {
       // JWT 토큰 생성 또는 리다이렉션 중 오류 발생 시 처리
       console.error(
